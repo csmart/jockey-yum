@@ -1,0 +1,5 @@
+usr/bin/*-kde
+usr/share/applications/*-kde.*
+usr/share/autostart/*-kde.desktop etc/xdg/autostart/
+usr/share/jockey/*Dialog*.ui
+usr/share/jockey/*Window*.ui

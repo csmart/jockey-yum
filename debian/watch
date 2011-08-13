@@ -1,0 +1,2 @@
+version=3
+http://launchpad.net/jockey/+download .*/jockey-([0-9.]+)\.tar\.gz

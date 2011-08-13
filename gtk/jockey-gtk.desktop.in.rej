@@ -1,0 +1,11 @@
+--- gtk/jockey-gtk.desktop.in
++++ gtk/jockey-gtk.desktop.in
+@@ -5,6 +5,7 @@
+ Exec=/usr/bin/jockey-gtk
+ Terminal=false
+ Type=Application
+-Categories=System;Settings;GTK;HardwareSettings;
++Categories=GNOME;GTK;Settings;DesktopSettings;X-GNOME-Settings-Panel;HardwareSettings
+ NotShowIn=KDE;
+ X-Ubuntu-Gettext-Domain=jockey
++X-GNOME-Settings-Panel=jockey

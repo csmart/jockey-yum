@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 # (c) 2007 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -19,6 +19,22 @@
 
 import fcntl, os, subprocess, sys, logging, re, tempfile, time, shutil
 from glob import glob
+
+import warnings
+warnings.simplefilter('ignore', FutureWarning)
+import apt
+
+class _CapturedInstallProgress(apt.InstallProgress):
+    def fork(self):
+        '''Reroute stdout/stderr to files, so that we can log them'''
+
+        self.stdout = tempfile.TemporaryFile()
+        self.stderr = tempfile.TemporaryFile()
+        p = os.fork()
+        if p == 0:
+            os.dup2(self.stdout.fileno(), sys.stdout.fileno())
+            os.dup2(self.stderr.fileno(), sys.stderr.fileno())
+        return p
 
 class OSLib:
     '''Encapsulation of operating system/Linux distribution specific operations.'''
@@ -109,69 +125,102 @@ class OSLib:
         # available, or being pulled in via dependencies (and there are not
         # multiple kernel flavors), it is ok to set this to "None". This should
         # use self.target_kernel instead of os.uname()[2].
-        self.kernel_header_package = None
+        # Note that we want to install the metapackage here, to ensure upgrades
+        # will keep working.
+        flavour = '-'.join(self.target_kernel.split('-')[2:])
+        self.kernel_header_package = 'linux-headers-' + flavour
+
+        self.apt_show_cache = {}
+        self.apt_sources = '/etc/apt/sources.list'
+        self.apt_jockey_source = '/etc/apt/sources.list.d/jockey.list'
+        self.apt_trusted_keyring = '/etc/apt/trusted.gpg.d/jockey-drivers.gpg'
+
+        self._current_xorg_video_abi = None
 
     # 
     # The following package related functions use PackageKit; if that does not
     # work for your distribution, they must be reimplemented
     #
 
+    def _apt_show(self, package):
+        '''Return apt-cache show output, with caching.
+        
+        Return None if the package does not exist.
+        '''
+        try:
+            return self.apt_show_cache[package]
+        except KeyError:
+            apt = subprocess.Popen(['apt-cache', 'show', package],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out = apt.communicate()[0].strip()
+            if apt.returncode == 0 and out:
+                result = out
+            else:
+                result = None
+            self.apt_show_cache[package] = result
+            return result
+
     def is_package_free(self, package):
         '''Return if given package is free software.'''
 
-        pkcon = subprocess.Popen(['pkcon', '--filter=newest', 
-            'get-details', package], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        m = re.search("^\s*license:\s*'?(.*)'?$", out, re.M)
-        if m:
-            # TODO: check more licenses here
-            return m.group(1).lower().startswith('gpl') or \
-                m.group(1).lower() in ('free', 'bsd', 'mpl')
-        else:
-            raise ValueError('package %s does not exist' % package)
+        # TODO: this only works for packages in the official archive
+        out = self._apt_show(package)
+        if out:
+            for l in out.splitlines():
+                if l.startswith('Section:'):
+                    s = l.split()[-1]
+                    return not (s.startswith('restricted') or s.startswith('multiverse'))
+
+        raise ValueError('package %s does not exist' % package)
 
     def package_installed(self, package):
         '''Return if the given package is installed.'''
 
-        pkcon = subprocess.Popen(['pkcon', 'resolve', package],
+        dpkg = subprocess.Popen(["dpkg-query", "-W", "-f${Status}", package],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = pkcon.communicate()[0]
-        return pkcon.returncode == 0 and '\ninstalled ' in out.lower()
+        out = dpkg.communicate()[0]
+        return dpkg.returncode == 0 and out.split()[-1] == "installed"
 
     def package_description(self, package):
         '''Return a tuple (short_description, long_description) for a package.
         
         This should raise a ValueError if the package is not available.
         '''
-        pkcon = subprocess.Popen(['pkcon', '--filter=newest', 
-            'get-details', package], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        m = re.search("^\s*description:\s*'?(.*?)'?$", out, re.M | re.S)
-        if m:
-            # TODO: short description (not accessible with pkcon)
-            return (package, m.group(1))
-        else:
-            raise ValueError('package %s does not exist' % package)
+        out = self._apt_show(package)
+        if out:
+            lines = out.splitlines()
+            start = 0
+            while start < len(lines)-1:
+                if lines[start].startswith('Description'):
+                    break
+                start += 1
+            else:
+                raise SystemError('failed to parse package description from ' + '\n'.join(lines))
+
+            short = lines[start].split(' ', 1)[1]
+            long = ''
+            for l in lines[start+1:]:
+                if l == ' .':
+                    long += '\n\n'
+                elif l.startswith(' '):
+                    long += l.lstrip()
+                else:
+                    break
+
+            return (short, long)
+
+        raise ValueError('package %s does not exist' % package)
 
     def package_files(self, package):
         '''Return a list of files shipped by a package.
         
         This should raise a ValueError if the package is not installed.
         '''
-        pkcon = subprocess.Popen(['pkcon', '--filter=installed', 
-            'get-files', package], stdin=subprocess.PIPE, 
+        pkcon = subprocess.Popen(['dpkg', '-L', package],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        if pkcon.returncode == 0 and '\n  ' in out:
-            return [l.strip() for l in out.splitlines() if l.startswith('  ')]
+        out = pkcon.communicate()[0]
+        if pkcon.returncode == 0:
+            return out.splitlines()
         else:
             raise ValueError('package %s is not installed' % package)
 
@@ -202,43 +251,95 @@ class OSLib:
         An unknown package should raise a ValueError. Any installation failure
         should be raised as a SystemError.
         '''
-        if repository or fingerprint:
-            raise NotImplementedError('PackageKit default implementation does not currently support repositories or fingerprints')
+        class MyFetchProgress(apt.FetchProgress):
+            def __init__(self, callback):
+                apt.FetchProgress.__init__(self)
+                self.callback = callback
 
-        # this will check if the package exists
-        self.package_description(package)
+            def pulse(self):
+                # consider download as 40% of the total progress for installation
+                logging.debug('download progress %s %f' % (pkg, self.percent))
+                return not self.callback('download', int(self.percent/2.5+10.5), 100)
 
-        pkcon = subprocess.Popen(['pkcon', 'install', '-v', package],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        class MyInstallProgress(_CapturedInstallProgress):
+            def __init__(self, callback):
+                _CapturedInstallProgress.__init__(self)
+                self.callback = callback
 
-        re_progress = re.compile('progress-changed (\d+), (\d+),')
+            def statusChange(self, pkg, percent, status):
+                # consider install as 50% of the total progress for installation
+                logging.debug('install progress %s %f' % (pkg, percent))
+                self.callback('install', int(percent/4+50.5), 100)
 
-        phase = None
-        err = ''
-        fail = False
-        while pkcon.poll() == None:
-            line = pkcon.stdout.readline()
-            if line == '':
-                break
-            if fail:
-                err += line
-            if 'status-changed download' in line:
-                phase = 'download'
-            elif 'status-changed commit' in line:
-                phase = 'install'
-            elif progress_cb and 'progress-changed' in line:
-                m = re_progress.search(line)
-                if m and phase:
-                    progress_cb(phase, int(m.group(1)), int(m.group(2)))
+        logging.debug('Installing package: %s', package)
+        if progress_cb:
+            progress_cb('download', 0, 100.0)
+
+        if repository:
+            if not self.repository_enabled(repository):
+                logging.debug('install_package(): adding repository %s', repository)
+                self._add_repository(repository, fingerprint, progress_cb)
+                repository_added = True
+            else:
+                logging.debug('install_package(): repository %s already active', repository)
+                repository_added = False
+
+        os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
+        # Disconnect from any running Debconf instance.
+        try:
+            del os.environ['DEBIAN_HAS_FRONTEND']
+        except KeyError:
+            pass
+        try:
+            del os.environ['DEBCONF_USE_CDEBCONF']
+        except KeyError:
+            pass
+        os.environ['PATH'] = '/sbin:/usr/sbin:/bin:/usr/bin'
+        apt.apt_pkg.config.set('DPkg::options::','--force-confnew')
+
+        c = apt.Cache()
+        try:
+            try:
+                pkg = c[package]
+                origins = pkg.candidate.origins
+            except (KeyError, AttributeError):
+                raise ValueError('Package %s does not exist' % package)
+
+            # if we have a binary package, we require a trusted origin; if we
+            # don't have one, and we added a repository, remove it again
+            # note: pkg.candidate.architecture switched away from "all" in Ubuntu 11.04
+            if pkg.candidate.record['Architecture'] != 'all':
+                for o in origins:
+                    if o.trusted:
+                        break
                 else:
-                    progress_cb(phase or 'download', -1, -1)
-            elif 'WARNING' in line:
-                fail = True
+                    logging.error('Binary package %s has no trusted origin, rejecting', package)
+                    if repository and repository_added:
+                        self._remove_repository(repository)
+                    raise SystemError('Binary package %s has no trusted origin, rejecting' % package)
 
-        err += pkcon.stderr.read()
-        if pkcon.wait() != 0 or not self.package_installed(package):
-            raise SystemError('package %s failed to install: %s' % (package, err)) 
-            
+            pkg.markInstall()
+            inst_p = progress_cb and MyInstallProgress(progress_cb) or None
+            c.commit(progress_cb and MyFetchProgress(progress_cb) or None, inst_p)
+            if inst_p:
+                inst_p.stdout.seek(0)
+                out = inst_p.stdout.read()
+                inst_p.stdout.close()
+                inst_p.stderr.seek(0)
+                err = inst_p.stderr.read()
+                inst_p.stderr.close()
+
+                if out:
+                    logging.debug(out)
+                if err:
+                    logging.error(err)
+        except apt.cache.FetchCancelledException as e:
+            return False
+        except (apt.cache.LockFailedException, apt.cache.FetchFailedException) as e:
+            logging.warning('Package fetching failed: %s', str(e))
+            raise SystemError(str(e))
+        return True
+
     def remove_package(self, package, progress_cb):
         '''Uninstall the given package.
 
@@ -252,35 +353,46 @@ class OSLib:
 
         Any removal failure should be raised as a SystemError.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'remove', '-v', package],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
+        os.environ['PATH'] = '/sbin:/usr/sbin:/bin:/usr/bin'
+        
+        class MyInstallProgress(_CapturedInstallProgress):
+            def __init__(self, callback):
+                _CapturedInstallProgress.__init__(self)
+                self.callback = callback
 
-        re_progress = re.compile('progress-changed (\d+), (\d+),')
+            def statusChange(self, pkg, percent, status):
+                logging.debug('remove progress statusChange %s %f' % (pkg, percent))
+                self.callback(percent, 100.0)
 
-        have_progress = False
-        err = ''
-        fail = False
-        while pkcon.poll() == None:
-            line = pkcon.stdout.readline()
-            if line == '':
-                break
-            if fail:
-                err += line
-            if 'status-changed remove' in line:
-                have_progress = True
-            elif progress_cb and 'progress-changed' in line:
-                m = re_progress.search(line)
-                if m and have_progress:
-                    progress_cb(int(m.group(1)), int(m.group(2)))
-                else:
-                    progress_cb(-1, -1)
-            elif 'WARNING' in line:
-                fail = True
+        logging.debug('Removing package: %s', package)
 
-        err += pkcon.stderr.read()
-        pkcon.wait()
-        if self.package_installed(package):
-            raise SystemError('package %s failed to remove: %s' % (package, err)) 
+        c = apt.Cache()
+        try:
+            try:
+                c[package].markDelete()
+            except KeyError:
+                logging.debug('Package %s does not exist, aborting', package)
+                return False
+            inst_p = progress_cb and MyInstallProgress(progress_cb) or None
+            c.commit(None, inst_p)
+            if inst_p:
+                inst_p.stdout.seek(0)
+                out = inst_p.stdout.read()
+                inst_p.stdout.close()
+                inst_p.stderr.seek(0)
+                err = inst_p.stderr.read()
+                inst_p.stderr.close()
+
+                if out:
+                    logging.debug(out)
+                if err:
+                    logging.error(err)
+        except apt.cache.LockFailedException as e:
+            logging.debug('could not lock apt cache, aborting: %s', str(e))
+            raise SystemError, str(e)
+
+        return True
 
     def has_repositories(self):
         '''Check if package repositories are available.
@@ -288,12 +400,10 @@ class OSLib:
         This might not be the case after a fresh installation, when package
         indexes haven't been downloaded yet.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'get-details', 'bash'],
+        apt_policy = subprocess.Popen(['apt-cache', 'policy', 'dkms'],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = pkcon.communicate()[0]
-        # PK can't detect package sizes without repositories
-        m = re.search("^\s*size:\s*0 bytes$", out, re.M)
-        return m == None
+        out = apt_policy.communicate()[0]
+        return '://' in out
 
     def update_repository_indexes(self, progress_cb):
         '''Download package repository indexes.
@@ -305,14 +415,24 @@ class OSLib:
         regularly. Passes '-1' for current and/or total if time cannot be
         determined.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'refresh'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.environ['PATH'] = '/sbin:/usr/sbin:/bin:/usr/bin'
+        
+        class MyProgress(apt.FetchProgress):
+            def __init__(self, callback):
+                apt.FetchProgress.__init__(self)
+                self.callback = callback
 
-        while pkcon.poll() == None:
-            time.sleep(0.3)
-            if progress_cb:
-                progress_cb(-1, -1)
-        pkcon.wait()
+            def pulse(self):
+                #logging.debug('index download progress %f' % self.percent)
+                self.callback(self.percent, 100.0)
+
+        c = apt.Cache()
+        try:
+            c.update(progress_cb and MyProgress(progress_cb) or None)
+        except apt.cache.LockFailedException as e:
+            logging.debug('could not lock apt cache, aborting: %s', str(e))
+            raise SystemError(str(e))
+
         return self.has_repositories()
 
     def packaging_system(self):
@@ -414,7 +534,17 @@ class OSLib:
     def repository_enabled(self, repository):
         '''Check if given repository is enabled.'''
 
-        raise NotImplementedError('subclasses need to implement this')
+        for f in [self.apt_sources] + glob(self.apt_sources + '.d/*.list'):
+            try:
+                logging.debug('repository_enabled(%s): checking %s', repository, f)
+                for line in open(f):
+                    if line.strip() == repository:
+                        logging.debug('repository_enabled(%s): match', repository)
+                        return True
+            except IOError:
+                pass
+        logging.debug('repository_enabled(%s): no match', repository)
+        return False
 
     def ui_help_available(self, ui):
         '''Return if help is available.
@@ -422,7 +552,7 @@ class OSLib:
         This gets the current UI object passed, which can be used to determine
         whether GTK/KDE is used, etc.
         '''
-        return False
+        return os.access('/usr/bin/yelp', os.X_OK)
 
     def ui_help(self, ui):
         '''The UI's help button was clicked.
@@ -431,7 +561,10 @@ class OSLib:
         appropriate topic, etc. This gets the current UI object passed, which
         can be used to determine whether GTK/KDE is used, etc.
         '''
-        pass
+        if 'gtk' in str(ui.__class__).lower():
+            import gobject
+            gobject.spawn_async(['yelp', 'ghelp:hardware#jockey'],
+                flags=gobject.SPAWN_SEARCH_PATH)
 
     # 
     # The following functions have a reasonable default implementation for
@@ -465,7 +598,18 @@ class OSLib:
         Note that modules which are ignored here, but covered by a custom
         handler will still be considered.
         '''
-        return set()
+        # try to get a *.ko file list from the main kernel package to avoid testing
+        # known-free drivers
+        dpkg = subprocess.Popen(['dpkg', '-L', 'linux-image-' + os.uname()[2]],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out = dpkg.communicate()[0]
+        result = set()
+        if dpkg.returncode == 0:
+            for l in out.splitlines():
+                if l.endswith('.ko'):
+                    result.add(os.path.splitext(os.path.basename(l))[0].replace('-', '_'))
+
+        return result
 
     def module_blacklisted(self, module):
         '''Check if a module is on the modprobe blacklist.'''
@@ -590,9 +734,12 @@ class OSLib:
 
         The default implementation does nothing.
         '''
-        pass
+        try:
+            subprocess.call(['/usr/share/update-notifier/notify-reboot-required'])
+        except OSError:
+            pass
 
-    def package_header_modaliases(self):
+    def package_header_modaliases(self, cache=None):
         '''Get modalias map from package headers.
 
         Driver packages may declare the modaliases that they support in a
@@ -602,7 +749,29 @@ class OSLib:
 
         If this is not supported, simply return an empty dictionary here.
         '''
-        return {}
+        result = {}
+        if cache is None:
+            cache = apt.Cache()
+        for package in cache:
+            try:
+                m = package.candidate.record['Modaliases']
+            except (KeyError, AttributeError):
+                continue
+
+            try:
+                for part in m.split(')'):
+                    part = part.strip(', ')
+                    if not part:
+                        continue
+                    module, lst = part.split('(')
+                    for alias in lst.split(','):
+                        result.setdefault(package.name, {}).setdefault(module,
+                            []).append(alias.strip())
+            except ValueError:
+                logging.error('Package %s has invalid modalias header: %s' % (
+                    package.name, m))
+
+        return result
 
     def ssl_cert_file(self):
         '''Get file with trusted SSL certificates.
@@ -648,7 +817,16 @@ class OSLib:
         
         If this returns None, ABI checking is disabled.
         '''
-        return None
+        if not self._current_xorg_video_abi:
+            dpkg = subprocess.Popen(['dpkg', '-s', 'xserver-xorg-core'],
+                    stdout=subprocess.PIPE)
+            out = dpkg.communicate()[0]
+            if dpkg.returncode == 0:
+                m = re.search('^Provides: .*(xorg-video-abi-\w+)', out, re.M)
+                if m:
+                    self._current_xorg_video_abi = m.group(1)
+
+        return self._current_xorg_video_abi
 
     def video_driver_abi(self, package):
         '''Return video ABI for an X.org driver package.
@@ -661,4 +839,89 @@ class OSLib:
         
         If this returns None, ABI checking is disabled.
         '''
-        return None
+        abi = None
+        dpkg = subprocess.Popen(['apt-cache', 'show', package],
+                stdout=subprocess.PIPE)
+        out = dpkg.communicate()[0]
+        if dpkg.returncode == 0:
+            m = re.search('^Depends: .*(xorg-video-abi-\w+)', out, re.M)
+            if m:
+                abi = m.group(1)
+
+        return abi
+
+    #
+    # Internal helper methods
+    #
+
+    def _add_repository(self, repository, fingerprint, progress_cb):
+        '''Add a repository.
+
+        The format for repository is distribution specific. This function
+        should also download/update the package index for this repository.
+
+        This should throw a ValueError if the repository is invalid or
+        inaccessible.
+
+        fingerprint, if not None, is a GPG-style fingerprint of that
+        repository; if present, this method also retrieves that GPG key
+        from the keyservers and installs it into the packaging system.
+        '''
+        if fingerprint:
+            self.import_gpg_key(self.apt_trusted_keyring, fingerprint)
+
+        if os.path.exists(self.apt_jockey_source):
+            backup = self.apt_jockey_source + '.bak'
+            os.rename(self.apt_jockey_source, backup)
+        else:
+            backup = None
+        f = open(self.apt_jockey_source, 'a')
+        print >> f, repository.strip()
+        f.close()
+
+        class MyFetchProgress(apt.FetchProgress):
+            def __init__(self, callback):
+                apt.FetchProgress.__init__(self)
+                self.callback = callback
+
+            def pulse(self):
+                self.callback
+                logging.debug('index download progress %f' % self.percent)
+                # consider update as 10% of the total progress for installation
+                return not self.callback('download', int(self.percent/10+.5), 100)
+
+        c = apt.Cache()
+        try:
+            logging.debug('_add_repository(): Updating apt lists')
+            c.update(progress_cb and MyFetchProgress(progress_cb) or None,
+                    sources_list=self.apt_jockey_source)
+        except SystemError, e:
+            logging.error('_add_repository(%s): Invalid repository', repository)
+            if backup:
+                os.rename(backup, self.apt_jockey_source)
+            else:
+                os.unlink(self.apt_jockey_source)
+            raise ValueError(e.message)
+        except apt.cache.FetchCancelledException, e:
+            return False
+        except (apt.cache.LockFailedException, apt.cache.FetchFailedException), e:
+            logging.warning('Package fetching failed: %s', str(e))
+            raise SystemError(str(e))
+
+    def _remove_repository(self, repository):
+        '''Remove a repository.
+
+        The format for repository is distribution specific.
+        '''
+        if not os.path.exists(self.apt_jockey_source):
+            return
+        result = []
+        for line in open(self.apt_jockey_source):
+            if line.strip() != repository:
+                result.append(line)
+        if result:
+            f = open(self.apt_jockey_source, 'w')
+            f.write('\n'.join(result))
+            f.close()
+        else:
+            os.unlink(self.apt_jockey_source)

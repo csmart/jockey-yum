@@ -1,0 +1,1709 @@
+jockey (0.9.3-0ubuntu1) oneiric; urgency=low
+
+  * New upstream release. Changes since our last trunk merge:
+    - more Python 3 compatible imports
+    - ui.py: Move to AppIndicator3 for GTK 3 compatibility
+    - merge translations, update German fuzzy strings
+    - fglrx example handler: Rename ATI → AMD (LP: #755260)
+  * debian/control: Update appindicator GIR dependency.
+  * Cherrypick changes from trunk:
+    - gtk/jockey-gtk.desktop.in: Use correct categories to show up on the new
+      gnome-control-center. Thanks Rodrigo Moya! (LP: #787694)
+    - Add NoDisplay=true to autostart .desktop file and have jockey-gtk show up
+      in Unity. Thanks Mike Terry.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Jul 2011 16:36:39 +0200
+
+jockey (0.9.2-0ubuntu8) oneiric; urgency=low
+
+  * data/handlers/fglrx.py: Add support for multi-arch to the fglrx handler.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Tue, 05 Jul 2011 11:44:19 +0200
+
+jockey (0.9.2-0ubuntu7) oneiric; urgency=low
+
+  * data/handlers/nvidia.py: Properly check invalid alternatives and the
+    parent class' enabled() method, to avoid showing the nvidia driver as
+    enabled when it is not even installed.
+  * data/handlers/fglrx.py: Check invalid alternative, too.
+  * data/handlers/nvidia.py: Check multiarch alternatives as well. Thanks
+    Alberto Milone!
+  * data/handlers/nvidia.py: Fix crash if the free driver alternative is None.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 Jun 2011 14:53:20 +0100
+
+jockey (0.9.2-0ubuntu6) oneiric; urgency=low
+
+  * Convert build system to dh7, using the new dh-translations.
+  * Move to GTK3:
+    - gtk/jockey-gtk: Drop forcing GTK version to 2.
+    - debian/control: Update dependency to gir1.2-gtk-3.0.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 16 May 2011 10:02:54 +0200
+
+jockey (0.9.2-0ubuntu5) natty; urgency=low
+
+  [ Martin Pitt ]
+  * data/handlers/nvidia.py: Fix broken condition in used(), which would be
+    True already if the package was merely installed. (LP: #759804)
+  * jockey/oslib.py, ignored_modules(): Drop linux-ubuntu-modules, gone long
+    ago.
+  * Cherry-pick r720 from trunk to support a new --kernel option on the
+    backend and frontend with --no-dbus. This allows ubiquity to install a PAE
+    kernel on the target system and tell jockey to install kernel headers for
+    that one instead for the running one. Based on a patch from Evan Dandrea,
+    thanks! (LP: #759804)
+  * Cherry-pick r721 from trunk: OpenPrintingDriverDB: Use the actual package
+    version as "version" attribute instead of the driver name. This was a bit
+    of a thinko back then. Update test cases accordingly. (LP: #744751)
+
+  [ Evan Dandrea ]
+  * jockey/oslib.py: Disconnect from Debconf before installing packages.
+    (LP: #759804)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 19 Apr 2011 10:43:43 +0200
+
+jockey (0.9.2-0ubuntu4) natty; urgency=low
+
+  [ Martin Pitt ]
+  * data/handlers/nvidia.py: Some cleanup:
+    - Drop obsolete add_modules=['glx'].
+    - Drop setting DefaultDepth=24, X.org does that by default now.
+    - Move version 96 specific code to NvidiaDriver96 class.
+    - Remove some dead code.
+  * Merge from trunk:
+    - XorgDriverHandler: Support None X.org driver to avoid changing the
+      Driver setting. This is appropriate for drivers which X.org conf
+      autodetects.
+    - Add new flag Handler.needs_kernel_headers and install kernel headers if
+      set.
+  * data/handlers/{nvidia,fglrx}.py: Stop setting the X.org driver and
+    alternate free driver. Natty's X.org now prefers the proprietary drivers
+    over the free ones when available (105_nvidia_fglrx_autodetect.patch).
+    This allows X.org to fall back to the free driver if the proprietary one
+    gets broken or out of sync. (LP: #522061)
+  * jockey/oslib.py: Set kernel header metapackage name from currently running
+    kernel flavour, and add a small test case that it is a valid package.
+  * data/handlers/{nvidia,fglrx}.py: Replace custom code to install kernel
+    headers with setting the needs_kernel_headers flag.
+  * data/handlers/broadcom_wl.py: Set needs_kernel_headers flag. (LP: #567699)
+  * jockey/oslib.py, install_packages(): python-apt recently changed
+    "architecture" field of a candidate Version; where it used to say "all"
+    it now has the platform name. So switch to
+    candidate.record['Architecture'] to check if a package is Arch: all. This
+    unbreaks installation of unsigned third-party PPD packages.
+
+  [ Alberto Milone ]
+  * data/handlers/fglrx.py:
+    - Re-enable fglrx.
+    - Replace tabs with whitespaces.
+  * data/handlers/nvidia.py:
+    - Replace tabs with whitespaces.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 31 Mar 2011 17:29:28 +0200
+
+jockey (0.9.2-0ubuntu3) natty; urgency=low
+
+  * Merge from trunk:
+    - OSLib.import_gpg_key(): Respect $http_proxy. Thanks Olaf Meeuwissen.
+      (LP: #733023)
+    - oslib.py: Switch to default keyserver on port 80 to be more proxy
+      friendly. (LP: #733029)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 11 Mar 2011 18:07:01 +0100
+
+jockey (0.9.2-0ubuntu2) natty; urgency=low
+
+  * Merge from trunk:
+    - Reintroduce __fix_stdouterr(); we need it for proper -l unicode support.
+      However, delay it until after OptParser, as an already encoded
+      sys.stderr causes that to crash. (LP: #728744)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Mar 2011 17:34:30 +0100
+
+jockey (0.9.2-0ubuntu1) natty; urgency=low
+
+  * New upstream bug fix release:
+    - Add X.org video driver ABI checking. (This was already cherrypicked
+      in an earlier upload)
+    - Drop our own verified_https.py and implement GPG fingerprint SSL
+      checking with pycurl, which gets along with proxies. (LP: #729185)
+    - Some code cleanup and more test cases.
+  * debian/control: Add python-pycurl dependency.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 08 Mar 2011 16:08:06 +0100
+
+jockey (0.9.1-0ubuntu5) natty; urgency=low
+
+  * gtk/jockey-gtk: Update require_version() call to current pygobject API.
+    Bump python-gobject dependency accordingly.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 03 Mar 2011 17:21:07 +0100
+
+jockey (0.9.1-0ubuntu4) natty; urgency=low
+
+  * debian/control: Move nvidia-common back to Recommends, as this is only
+    available on i386/amd64, and we can't do arch specific dependencies for
+    arch:all packages. (Reopens #704597)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 28 Feb 2011 12:12:08 +0100
+
+jockey (0.9.1-0ubuntu3) natty; urgency=low
+
+  * Merge from trunk:
+    - Add X.org video driver ABI checking
+  * jockey/oslib.py: Implement current_xorg_video_abi() and
+    video_driver_abi() for Ubuntu.
+  * data/handlers/nvidia.py: Drop (already commented out) disabling due to ABI
+    mismatch. With above code, this check now happens dynamically, also works
+    for third-party repos, and we can stop having to update the handler each
+    time the ABIs get out of sync.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 28 Feb 2011 10:22:06 +0100
+
+jockey (0.9.1-0ubuntu2) natty; urgency=low
+
+  * data/handlers/nvidia.py:
+    - Re-enable nvidia-current now that we have an ABI compatible driver.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Sun, 27 Feb 2011 16:47:52 +0100
+
+jockey (0.9.1-0ubuntu1) natty; urgency=low
+
+  * New upstream bug fix release. Changes since our previous trunk snapshot:
+    - Do not create standard drivers for disabled custom drivers. This caused
+      NVidia/FGLRX to still be offered in Jockey, causing a lot of damage.
+      (LP: #716363)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 23 Feb 2011 21:20:34 +0100
+
+jockey (0.9-0ubuntu3) natty; urgency=low
+
+  * debian/control: Move nvidia-common from Recommends: to Depends:
+    (LP: #704597)
+  * jockey/oslib.py, install_packages(): Fix crash with third-party
+    repositories that do not have a trusted origin. (LP: #712685)
+  * Merge fixes from trunk:
+    - Add --no-dbus UI option. This will use a local Backend instance
+      instead of communicating with the D-BUS backend interface. This is
+      suitable for installers where jockey needs to run in a chroot.
+      (LP: #723223)
+    - ui.py: Drop __fix_stdouterr(), we are using gettext in unicode
+      mode, and this leads to crashes with --help.
+    - ui.py: Show translated driver names with --list
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 23 Feb 2011 11:53:31 +0100
+
+jockey (0.9-0ubuntu2) natty; urgency=low
+
+  * Merge fixes from trunk:
+    - jockey-gtk: Use glib.GError, not GLib.Error; the latter does not
+      actually work, and in general the static glib bindings are preferred for
+      now. (LP: #715753)
+    - Add VMWare client tools handler. Thanks Martin Owens! (LP: #716738)
+  * Remove bogus changelog entries in previous upload.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 15 Feb 2011 12:58:58 +0100
+
+jockey (0.9-0ubuntu1) natty; urgency=low
+
+  * New upstream release:
+    - First steps towards Python 3 compatibility.
+    - jockey-gtk: Fix icon lookup constant for PyGI. (LP: #706193)
+    - Fix crash on nonexisting packages.
+    - examples/fake.modaliases: Update for current Ubuntu driver name
+    - jockey-gtk: Use Gtk.ListStore constructor from pygi overrides
+    - tests/run-gtk: port to GI
+    - Fix regression from GI port: Properly set up the UI if there are no
+      drivers available. (LP: #702596)
+    - jockey-gtk: Fix UnicodeDecodeError crash on translated driver names
+    - Fix short driver description when getting them from package system
+  * jockey/oslib.py, package_description(): Fix for current apt output format.
+  * kde/jockey-kde.desktop.in, kde/jockey-kde: Remove the kdesu hack,
+    PolicyKit should work well in KDE now.
+  * debian/control, debian/rules: Move to dh_python2.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 03 Feb 2011 19:18:28 +0100
+
+jockey (0.8-0ubuntu6) natty; urgency=low
+
+  [ Michael Vogt ]
+  * jockey/oslib.py: Fix module alias parser error on multiple modules for a
+    Package.
+
+  [ Martin Pitt ]
+  * data/handlers/{nvidia,fglrx}.py: Disable drivers, as they are currently
+    unavailable for the X.org video driver ABI 9.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 01 Feb 2011 15:02:02 +0100
+
+jockey (0.8-0ubuntu5) natty; urgency=low
+
+  * data/handlers/nvidia.py: Fix typo.
+  * backend/com.ubuntu.DeviceDriver.service: Export {http,https,ftp}_proxy
+    variables from /etc/environment into the backend. (LP: #373795)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 31 Jan 2011 11:31:56 +0100
+
+jockey (0.8-0ubuntu4) natty; urgency=low
+
+  * data/handlers/nvidia.py: Point out that you need to install this in
+    order to run Unity.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 26 Jan 2011 14:43:02 +0100
+
+jockey (0.8-0ubuntu3) natty; urgency=low
+
+  * Merge with trunk:
+    - Add support for hardware enablement handlers.
+    - If a handler doesn't specify 'free' or 'description' but does include a 
+      binary package name, query the OS for that information.
+    - jockey-gtk: remove connect_signals GTK2 workaround, works in latest GTK
+
+ -- Mario Limonciello <Mario_Limonciello@Dell.com>  Wed, 19 Jan 2011 12:44:29 -0600
+
+jockey (0.8-0ubuntu2) natty; urgency=low
+
+  * Add data/handlers/nouveau3d.py: Handler for installing
+    libgl1-mesa-dri-experimental on systems where nouveau is loaded.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 14 Jan 2011 17:21:44 -0600
+
+jockey (0.8-0ubuntu1) natty; urgency=low
+
+  * New upstream release:
+    - jockey-gtk: Convert from pygtk to gobject-introspection.
+  * debian/control: Update dependencies to required GIR packages.
+  * gtk/jockey-gtk: Force using GTK 2.0 for now, as we only have an
+    appindicator GIR for GTK 2.0.
+  * debian/control: Wrap dependencies.
+  * debian/control: Drop obsolete python-xdg dependency.
+  * debian/control: Drop unnecessary XB-Python-Version headers from -gtk and
+    -kde packages, and set appropriate XS-Python-Version.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 09 Jan 2011 20:46:55 -0600
+
+jockey (0.7.1-0ubuntu1) natty; urgency=low
+
+  * New upstream release:
+    - Move HTTP sever for test suite to separate module for easier reuse.
+    - tests: Skip online OSLib tests when being offline
+    - OSLib.install_package(): Fix exception for unknown package
+    - Add a demo GPG key to tests/, for testing signed archives
+    - OSLib tests: use local test keyserver
+  * jockey/oslib.py, install_package(): Don't just require specifying a
+    fingerprint, but instead fail when trying to install any binary package
+    without a trusted origin.
+  * tests/oslib.py: Add local test cases for unsigned/signed binary/arch:all
+    repository addition, GPG key retrieval, and package installation.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 08 Jan 2011 17:30:02 -0600
+
+jockey (0.7-0ubuntu2) natty; urgency=low
+
+  * jockey/oslib.py: Add proper progress feedback for updating the apt
+    indexes.
+  * jockey/oslib.py: Use apt.Cache.update()'s undocumented, but awesome
+    sources_list argument to only update jockey's apt sources, not the entire
+    system's. This dramatically speeds up driver installation. Adjust
+    index/download/install accordingly (10%/40%/50% now).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 07 Jan 2011 15:43:16 +0100
+
+jockey (0.7-0ubuntu1) natty; urgency=low
+
+  * New upstream release:
+    - Add support for repository fingerprints, and retrieve them from
+      openprinting.org when available.
+    - Allow binary drivers if they have a valid GPG fingerprint on a trusted
+      https:// site. This is a lot weaker than our usual archive trust chain,
+      but as it's very hard to get a chain of trust to printer driver vendors,
+      relying on good SSL certificates is the next best step, and still much
+      better than what the average user does when searching and downloading a
+      driver by himself.
+    - Add API for retrieving and installing a GPG key based on a fingerprint.
+    - Merge add_repository() into install_package(), which is much more
+      practical for verifying whether a package in a new repository ist
+      trustworthy.
+  * jockey/oslib.py, tests/oslib.py: Update for merged add_repository(), and
+    implement GPG retrieval and repository trust checking. This now provides
+    secure binary third-party drivers. (LP: #604698)
+  * tests/oslib.py, test_ubuntu_package_header_modaliases(): Fix typo in
+    regular expression which didn't catch "fglrx" before.
+  * data/handlers/fglrx.py, data/handlers/nvidia.py: Disable these two
+    handlers in a live system environment (if /rofs exists). We will most
+    likely run out of RAM trying to download, build, and install all the
+    packages in the RAM disk. (LP: #685017)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 06 Jan 2011 19:13:24 +0100
+
+jockey (0.6-0ubuntu4) natty; urgency=low
+
+  * debian/control: Drop bcmwl-modaliases recommends, it's replaced with
+    a package header now.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 18 Dec 2010 19:06:17 +0100
+
+jockey (0.6-0ubuntu3) natty; urgency=low
+
+  * jockey/oslib.py:
+    - fix crash if a given package has no candidate version
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Wed, 01 Dec 2010 15:05:46 +0100
+
+jockey (0.6-0ubuntu2) natty; urgency=low
+
+  * debian/control: Drop bcmwl-modaliases recommends, it's replaced with
+    a package header now.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 25 Nov 2010 20:16:50 +0100
+
+jockey (0.6-0ubuntu1) natty; urgency=low
+
+  [ Alberto Milone ]
+  * data/handlers/nvidia.py:
+    - Re-enable nvidia-96 now that it's compatible with xserver 1.9.
+      (LP: #626974).
+
+  [ Martin Pitt ]
+  * New upstream release 0.6:
+    - Add support and test case for reading modaliases from package headers.
+    - Put back "Additional Drivers" progress window title. Thanks Bilal
+      Akhtar! (LP: #323815)
+    - jockey/detection.py, get_hardware(): Disable printer detection.
+      cupshelpers.getDevices() is excruciatingly slow (about 15 seconds), and
+      jockey is not normally used directly to install printer drivers.
+      Instead, system-config-printer picks up new printers, and calls jockey
+      with the device ID, so jockey does not need to detect printers by
+      itself.
+    - jockey-kde: Use runtime .ui loading instead of pykdeuic4; the latter
+      just keeps breaking.
+    - gtk/jockey-gtk.ui: Drop obsolete has_separator property; Explicitly set
+      topmost GtkVBox fill property to True, as the default changed in GTK 3.0
+      (GNOME #634592)
+    - Various test suite fixes.
+  * debian/control: Drop now obsolete python-{qt4,kde}* build dependencies.
+  * debian/jockey-kde.install: Install the KDE *.ui files.
+  * jockey/oslib.py, has_repositories(): Greatly speed up (5 seconds →
+    negligible) by calling "apt-cache policy" instead of creating an
+    apt.Cache() object.
+  * Drop data/handlers/b43.py, our linux-firmware package ships the b43
+    firmware now. Also, the wl driver is generally a lot better.
+  * Add support for putting modalias definitions in driver package's
+    debian/control, so that we can replace the /usr/share/jockey/modaliases/*
+    lists with lookups in the package database (see blueprint
+    hardware-desktop-n-package-field-modaliases). With this we can drop the
+    foo-modaliases packages, and shipping third-party driver packages will
+    just work in Jockey without any further integration.
+    - Add debian/debhelper/dh_jockey: Debhelper program to produce a
+      ${modaliases} substvar from scanning .ko files or
+      debian/packagename.modaliases.
+    - Add debian/debhelper/test_dh_jockey: Automatic test script for
+      dh_jockey.
+    - Add debian/debhelper/modaliases.pm: dh_auto sequencer for dh_modaliases.
+    - debian/control: Add dh-modaliases package.
+    - debian/dh-modaliases.install: Install dh_modaliases and modaliases.pm.
+    - debian/rules: Create manpage from dh_modaliases POD.
+    - jockey/oslib.py: Add apt implementation for package_header_modaliases().
+    - tests/oslib.py: Add test case for our package_header_modaliases()
+      implementation. This only really tests anything if there is at least one
+      package with a "Modaliases:" field in the local apt repository.
+  * jockey/oslib.py: Change deprecated apt.apt_pkg.Config.Set() to .set().
+  * debian/rules: Drop simple-patchsys.mk, we don't need it (patches are
+    inline, maintained in bzr).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 25 Nov 2010 19:49:00 +0100
+
+jockey (0.5.10-0ubuntu5.1) maverick-proposed; urgency=low
+
+  * Change B43Handler to deal with the various firmware-b43*installer
+    packages. This requires adding a modalias file for 
+    firmware-b43-lpphy-installer (LP: #655111)
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Thu, 07 Oct 2010 12:20:31 +0200
+
+jockey (0.5.10-0ubuntu5) maverick; urgency=low
+
+  * data/handlers/nvidia.py:
+    - Re-enable nvidia-173 now that it's compatible with xserver 1.9.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Mon, 04 Oct 2010 15:40:02 +0200
+
+jockey (0.5.10-0ubuntu4) maverick; urgency=low
+
+  * data/handlers/fglrx.py, nvidia.py:
+    - Re-enable fglrx now that it's compatible with xserver 1.9.
+    - Make sure that the initramfs is updated for both the newest kernel
+      and for the current kernel, so as to be consistent with the default
+      behaviour of the DKMS template that both driver packages use.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Thu, 23 Sep 2010 13:15:03 +0200
+
+jockey (0.5.10-0ubuntu3) maverick; urgency=low
+
+  * Add support for bypassing local detection for search_driver(). (Merged
+    from trunk). Thanks to Till Kamppeter for the initial patches!
+  * jockey/ui.py: Ubuntu does not currently support local printer driver
+    handlers, so speed up the lookup of remote ones by disabling local
+    detection of hardware/handlers in search_driver() if we are looking for a
+    printer driver. (Note that this is a hack, but the speedup is significant)
+    (LP: #574396)
+  * Add OSLib.notify_reboot_required() and call it in set_handler_enabled().
+    Merged from trunk, and add Ubuntu specific implementation using
+    /usr/share/update-notifier/notify-reboot-required in OSLib. (LP: #570215)
+  * data/handlers/b43.py: Install firmware-b43-installer package instead of
+    b43-fwcutter. (LP: #595344)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 15 Sep 2010 13:35:48 +0200
+
+jockey (0.5.10-0ubuntu2) maverick; urgency=low
+
+  * data/handlers/nvidia.py:
+    - Don't set the IgnoreABI option in xorg.conf any longer as nvidia-
+      current is now ABI compatible with the new xserver.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Tue, 07 Sep 2010 10:49:54 +0200
+
+jockey (0.5.10-0ubuntu1) maverick; urgency=low
+
+  * New upstream release:
+    - ui --list: show auto-install flag
+    - Add flag file based auto install mode
+    - Add a title to the "search drivers" dialog. Thanks to Bilal Akhtar!
+      (LP: #616569)
+    - Rename "Hardware Drivers" to "Additional Drivers", to point out that
+      Jockey is not responsible for all kinds of drivers. Thanks to Robert
+      Roth for the initial patch. (LP: #409338)
+    - Hide "Remove" button if a driver needs reboot. Thanks to Bilal Akhtar
+      for the initial patch! (LP: #600804)
+  * debian/control: Add missing ${misc:Depends}.
+  * debian/control: No need to build-depend on python-dev.
+  * debian/control: Fix nvidia-common dependency.
+  * Add debian/source/format: "1.0", since changes are bzr maintained.
+  * debian/control: Bump Standards-Version to 3.9.1.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 24 Aug 2010 20:05:24 +0200
+
+jockey (0.5.9-0ubuntu2) maverick; urgency=low
+
+  * data/handlers/fglrx.py, nvidia.py:
+    - Temporarily disable fglrx, nvidia 96 and 173 and ignore the fact that nvidia
+      current claims to be ABI incompatible with the new xserver.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Thu, 12 Aug 2010 16:06:53 +0200
+
+jockey (0.5.9-0ubuntu1) maverick; urgency=low
+
+  * New upstream release. Changes since our last snapshot:
+    - Add a fake modalias file for local testing
+    - Update translations from Launchpad and update German ones
+    - Fix Polish translation. (LP: #451968)
+    - Add Handler.auto_install() flag and --auto-install mode. Thanks to Evan
+      Dandrea!
+  * data/handlers/broadcom_wl.py: Mark for automatic installation.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 23 Jul 2010 15:13:49 +0200
+
+jockey (0.5.8-0ubuntu8) lucid; urgency=low
+
+  * data/handlers/fglrx.py, nvidia.py:
+    - Do not check the non null value of current_alternative and
+      target_alternative. This caused jockey to skip the condition
+      that we really wanted to test (i.e. do the two alternatives
+      match?) and show the driver as enabled when the target
+      alternative didn't exist (as the package hadn't been installed
+      yet) (LP: #562226).
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Mon, 19 Apr 2010 10:36:10 +0200
+
+jockey (0.5.8-0ubuntu7) lucid; urgency=low
+
+  [ Alberto Milone ]
+  * Do not check that the module is loaded in enabled() in the nvidia
+    handler, as this is what we should do in used(). Just make sure
+    that the module and its alias are not blacklisted. This prevents
+    Jockey from claiming that the installation of nvidia driver failed
+    when when it didn't (LP: #552653).
+
+  [ Jonathan Thomas ]
+  * Don't crash when closed with the "x" button (LP: #552723, LP: #398912).
+    Thanks ThorbjørnTux!
+
+  [ Martin Pitt ]
+  * i18n "Install Drivers" string. (LP: #542552)
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Mon, 12 Apr 2010 10:13:16 +0200
+
+jockey (0.5.8-0ubuntu6) lucid; urgency=low
+
+  * data/handlers/fglrx.py:
+    - Re-enable the fglrx handler and make it use the alternatives system
+      (LP: #496225).
+  * data/handlers/nvidia.py:
+    - See if the module alias is loaded and then check what module it
+      corresponds to in order to see if it's really enabled (LP: #547066).
+      This involved overriding the enabled() and the used() methods.
+  * jockey/xorg_driver.py:
+    - Simplify the logic in the enabled() method by only relying on
+      X-Kit's isDriverEnabled() method. This will avoid getting false
+      positives in the case in which the 1st Device section (i.e. the
+      only one that we used to check) uses the right driver but the
+      same section is irrelevant as it's not mentioned in the
+      ServerLayout section.
+
+ -- Alberto Milone <alberto.milone@canonical.com>  Tue, 30 Mar 2010 15:48:37 +0200
+
+jockey (0.5.8-0ubuntu5) lucid; urgency=low
+
+  * Merge fixed KDE .ui file from trunk, thanks Jonathan Thomas! This fixes
+    the crash on jockey-kde startup.
+  * debian/control: Revert the python-distutils-extra build dependency bump,
+    not necessary any more with the fix above.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 26 Mar 2010 17:50:00 +0100
+
+jockey (0.5.8-0ubuntu4) lucid; urgency=low
+
+  * Merge bug fix from trunk:
+    - ui.py: Fix _check_repositories() to not invoke the UI and error dialogs
+      in --check mode. (LP: #540750)
+  * debian/control: Bump python-distutils-extra build dependency, to ensure we
+    build correct -kde packages. (LP: #543707)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 26 Mar 2010 17:41:56 +0100
+
+jockey (0.5.8-0ubuntu3) lucid; urgency=low
+
+  [ Martin Pitt ]
+  * jockey/oslib.py: Use "dkms" instead of "bash" for testing whether we have
+    repositories. This works slightly better with third-party repositories.
+
+  [ Mario Limonciello ]
+  * data/handlers/fglrx.py: The package name is now just "fglrx" rather than
+    xorg-driver-fglrx.
+
+ -- Mario Limonciello <superm1@ubuntu.com>  Thu, 25 Mar 2010 01:01:14 -0500
+
+jockey (0.5.8-0ubuntu2) lucid; urgency=low
+
+  * Merge fixes from trunk:
+    - ui.py, check(): If the user is running Jockey with package installation
+      or another long-running task in parallel, the automatic --check
+      invocation will time out on connecting to the backend. This is not
+      fatal, just print an error message instead of crashing. (LP: #403955)
+    - jockey-gtk: Fix progress dialogs to not be maximizable. (LP: #537911)
+    - Do not parent the KMessageBox, since in some cases the errors can come
+      before the MainWindow is initialized. Thanks Jonathan Thomas!
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 20 Mar 2010 22:36:55 +0100
+
+jockey (0.5.8-0ubuntu1) lucid; urgency=low
+
+  * New upstream bug fix release:
+    - Make Control-C work properly. Thanks Adys! (LP: #479548)
+    - Read system vendor/product from sysfs, not from hal
+    - OSLib: Add new method has_repositories(), as a foundation for fixing
+      #442776
+    - backend.py, new_used_available(): Skip check if no package repositories
+      are available, to avoid writing an empty cache file and thus never
+      showing Jockey notifications again once they become available.
+      (LP: #442776)
+    - Shutdown D-BUS backend on UI shutdown, to not start the next UI with
+      potentially outdated information.
+    - backend.py: Expose has_repositories() and update_repository_indexes() to
+      clients.
+    - ui.py: Download/update package indexes if they are missing.
+      (LP: #439530)
+  * jockey/oslib.py: Provide an apt implementation of has_repositories().
+  * jockey/oslib.py: Provide an apt implementation of
+    update_repository_indexes().
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 11 Mar 2010 17:48:11 +0100
+
+jockey (0.5.7-0ubuntu1) lucid; urgency=low
+
+  * New upstream release:
+    - gtk/autostart/jockey-gtk.desktop.in: Fix regression from r596, add back
+      "--check" mode. This fixes jockey always popping up after session start.
+    - kde: Set the bugEmail variable and add it to the KAboutData constructor
+      (LP: #398920)
+    - kde: Bump notification pixmap size down to 22x22, for consistency with
+      other KDE apps
+    - kde: Optimize KIcon usage in general
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 11 Feb 2010 15:40:43 +0100
+
+jockey (0.5.6-0ubuntu2) lucid; urgency=low
+
+  * data/handlers/nvidia.py: Update to the new nvidia package structure that
+    we have in lucid.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 05 Feb 2010 13:27:29 -0800
+
+jockey (0.5.6-0ubuntu1) lucid; urgency=low
+
+  [ Alberto Milone ]
+  * debian/control:
+    - Recommend nvidia-common > 0.2.15 because of the new alternatives
+      class.
+  * data/handlers/nvidia.py:
+    - Add support for the new alternatives system by using the
+      Alternatives class from nvidia-common.
+  * data/handlers/fglrx.py:
+    - Keep fglrx disabled until AMD provides us with a driver that is
+      compatible with Lucid's xserver.
+
+  [ Martin Pitt ]
+  * New upstream version:
+    - xorg_driver.py, enable(): Do not mangle xorg.conf if module is not
+      available after package installation. (LP: #451305)
+    - ui.py, set_handler_enabled(): Give an error message pointing to the log
+      file if driver installation fails. (LP: #451305)
+    - nvidia.py: Remove options for version 71, it does not work with current
+      X.org versions any more
+    - backend.py: Explicitly pass start-time to PolicyKit CheckAuthorization
+      call, to work with polkit-1 0.95. (LP: #491136)
+    - jockey-kde notification fixes, thanks Jonathan Thomas
+    - Add libappindicator support, thanks Conor Curran
+    - Add do_blacklist argument in the ctor of the KernelModuleHandler class,
+      thanks Alberto Milone
+  * Drop 01_app_indicator_integration.patch: Applied upstream.
+  * gtk/autostart/jockey-gtk.desktop.in: Replace "--check 60" with new
+    X-GNOME-Autostart-Delay option. (Cherrypicked from trunk)
+  * debian/control: Explicitly depend on python-kde4 to have a working
+    pykdeuic4, until the dependency gets fixed.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 01 Feb 2010 16:27:41 -0800
+
+jockey (0.5.5-0ubuntu6) lucid; urgency=low
+
+  * debian/control
+    - Added recommends for python-appindicator (>= 0.0.6) to jockey-gtk
+
+ -- Ken VanDine <ken.vandine@canonical.com>  Fri, 08 Jan 2010 16:10:41 -0500
+
+jockey (0.5.5-0ubuntu5) lucid; urgency=low
+
+  * debian/patches/01_app_indicator_integration.patch
+    - Adds application indicator support (LP: #497879) 
+  * debian/rules
+    - added simple-patchsys.mk
+
+ -- Ken VanDine <ken.vandine@canonical.com>  Fri, 08 Jan 2010 15:13:20 -0500
+
+jockey (0.5.5-0ubuntu4) lucid; urgency=low
+
+  * data/handlers/nvidia.py: Remove suppressing of driver version 71, it's not
+    available any more at all.
+  * Merge bug fixes from trunk:
+    - backend.py: Explicitly pass start-time to PolicyKit CheckAuthorization
+      call, to work with polkit-1 0.95. (LP: #491136)
+    - Remove options for version 71, it does not work with current X.org
+      versions any more.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 04 Dec 2009 18:46:36 +0100
+
+jockey (0.5.5-0ubuntu3) karmic-proposed; urgency=low
+
+  * Merge bug fixes from trunk:
+    - xorg_driver.py, enable(): Do not mangle xorg.conf if module is not
+      available after package installation. (LP: #451305, part 1)
+    - ui.py, set_handler_enabled(): Give an error message pointing to the log
+      file if driver installation fails. (LP: #451305, part 2)
+  * data/handlers/{fglrx,nvidia}.py: Override enable() method to first try and
+    install the corresponding kernel headers for the current kernel, to
+    eliminate a common reason for driver installation failure.
+    (LP: #451305, part 3)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 09 Nov 2009 14:30:34 +0100
+
+jockey (0.5.5-0ubuntu2) karmic; urgency=low
+
+  * data/handlers/b43.py: Remove bcmwl-kernel-source on installation, so that
+    it actually has a chance to work when wl was active before. (LP: #443185)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 22 Oct 2009 21:58:32 +0200
+
+jockey (0.5.5-0ubuntu1) karmic; urgency=low
+
+  * New upstream bug fix release:
+    - jockey-kde: Fix broken icons. (LP: #438940)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 02 Oct 2009 13:27:28 +0200
+
+jockey (0.5.4-0ubuntu1) karmic; urgency=low
+
+  * New upstream bug fix release:
+    - Update tests for openprinting.org changes; LaserJet 3020 does not exist
+      any more, replace with DesignJet 3050CP.
+    - Handler: Reload module blacklist after installing a driver package,
+      since it might ship blacklists.
+    - setup.py: Fix DistUtilsExtra version check. (LP: #428337)
+    - jockey-gtk: Check for having $DISPLAY at startup to avoid crashes.
+      (LP: #204134)
+  * ui.py: Fix error message parsing, thanks to rugby471! (LP: #386375)
+  * Add data/handlers/dvb_usb_firmware.py: Handler for DVB USB cards which
+    need to have the linux-firmware-nonfree package installed. (LP: #223212)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 21 Sep 2009 18:31:45 +0200
+
+jockey (0.5.3-0ubuntu3) karmic; urgency=low
+
+  [ Martin Pitt ]
+  * broadcom_wl.py: Run rmmod with full path, since the backend doesn't have a
+    $PATH when being activated by D-Bus. (LP: #403925)
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 07 Aug 2009 16:02:26 -0500
+
+jockey (0.5.3-0ubuntu2) karmic; urgency=low
+
+  * debian/control: Bump python-distutils-extra build dep (needs at least
+    2.4).
+  * debian/jockey-common.install: Update path for PolicyKit files.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 14 Jul 2009 17:42:12 +0200
+
+jockey (0.5.3-0ubuntu1) karmic; urgency=low
+
+  * New upstream release:
+    - Add a text frontend, 'jockey-text'.  Although the GTK and KDE frontends
+      can be launched and scripted command line, they are dependent upon
+      DISPLAY being set.  This text frontend has the ability to run in a true
+      text only environment. (By Mario Limonciello) (LP: #394688)
+    - Ported to polkit-1.
+  * debian/control: Update policykit dependencies to policykit-1. Drop
+    policykit-kde, since it does not exist so far.
+  * Merge bug fix from trunk: Move X-KDE-autostart-phase: field from menu to
+    autostart .desktop.
+  * kde/jockey-kde, kde/jockey-kde.desktop.in: Reintroduce code to run
+    frontend as root, since there is no KDE frontend for polkit-1 yet.
+  * data/handlers/broadcom_wl.py: rmmod b43 and friends before enabling wl, so
+    that it will work on the fly. (LP: #393689)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 14 Jul 2009 17:27:14 +0200
+
+jockey (0.5.2-0ubuntu1) karmic; urgency=low
+
+  * New upstream release 0.5.1:
+    - Add yum detection to packaging_system.
+    - Implement package installation/removal with PackageKit. (Not used in
+      Ubuntu right now).
+    - Fully functional on Fedora Core 10.
+  * New upstream release 0.5.2:
+    - Convert build system to DistUtilsExtra.auto.
+    - kde/jockey-kde.desktop.in: Move autostart to phase 2, for smoother
+      login. (LP: #369733)
+    - ui.py: Make proprietary driver warning less scary. (LP: #381805)
+    - jockey-gtk: port from glade to GtkBuilder.
+  * debian/control: Bump python-distutils-extra build dependency to ensure
+    availability of DistUtilsExtra.auto.
+  * debian/control: Drop obsolete python-glade2 dependency.
+  * debian/jockey-gtk.install: Install *.ui file instead of *.glade.
+  * jockey/oslib.py, ui_help(): Update yelp location for help, thanks Matthew
+    East! (LP: #274845)
+  * data/handlers/broadcom_wl.py: Require package bcmwl-kernel-source. Drop
+    our handling of the module blacklisting, bcmwl-kernel-source now does that
+    by itself. (LP: #381678)
+  * Move jockey.kdeui Python modules from jockey-common to jockey-kde.
+  * debian/control: Drop obsolete restricted-manager-* conflicts/replaces.
+  * debian/rules: Drop call to dh_icons, cdbs has done that for us for a long
+    time.
+  * debian/control: Bump Standards-Version to 3.8.2 (no changes necessary).
+  * debian/control: Recommend bcmwl-modaliases, so that the driver is detected
+    by default. (LP: #381683)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Jun 2009 16:21:37 +0200
+
+jockey (0.5-0ubuntu10) jaunty; urgency=low
+
+  * kde/jockey-kde: Revert Ubuntu specific change to call application through
+    kdesu from the applet. This isn't necessary any more with policykit-kde.
+    (LP: #357133)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 07 Apr 2009 09:39:26 -0700
+
+jockey (0.5-0ubuntu9) jaunty; urgency=low
+
+  * jockey/ui.py: Fix previous change to not break existing translations.
+    (LP: #353081)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 06 Apr 2009 14:47:05 -0700
+
+jockey (0.5-0ubuntu8) jaunty; urgency=low
+
+  * Merge fixes from trunk:
+    - ui.py, get_ui_driver_name(): If driver has a version, show it.
+    - nvidia.py: Set self.version instead of mangling name(), to avoid
+      breaking translations. (LP: #353081)
+    - Update German translations.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 06 Apr 2009 10:55:13 -0700
+
+jockey (0.5-0ubuntu7) jaunty; urgency=low
+
+  * Add support for unannounced drivers, i. e. drivers which do not cause
+    --check to report newly available drivers. This is a prerequisite for
+    LP #346078. (Cherrypicked from trunk.)
+  * data/handlers/madwifi.py: Only announce this driver through --check if
+    ath5k is not loaded. (LP: #346078)
+  * debian/control: Add alternative policykit-{gnome,kde} dependencies, to
+    make it possible to install -kde on GNOME or -gnome on KDE.
+  * jockey-gtk: Improve default height of driver list VPane, depending on
+    number of available drivers. (Cherrypicked from trunk) (LP: #291028)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 01 Apr 2009 11:03:44 +0200
+
+jockey (0.5-0ubuntu6) jaunty; urgency=low
+
+  * jockey/ui.py: If the backend crashes, ask the user to file a bug with
+    ubuntu-bug, not on Launchpad.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 27 Mar 2009 18:42:01 +0100
+
+jockey (0.5-0ubuntu5) jaunty; urgency=low
+
+  * Add debian/watch.
+  * Add bzr-builddeb configuration.
+  * data/handlers/fglrx.py: Enable again, 2:8.600-0ubuntu1 works on Jaunty
+    now.
+  * Merge bug fixes from trunk:
+    - Fix KernelModuleHandler.available() to return False when the handler
+      package is not available. This fixes the situation that Jockey
+      advertises e. g. the nvidia driver before apt-get update was run, or on
+      "free software only" installs. (LP: #341647)
+    - kde/jockey-kde.desktop.in: Do not run as root any more, PolicyKit-KDE
+      exists now; update README.txt
+    - kde/jockey-kde: Port to knotify4. UIF exception approval and original
+      patch by Jonathan Riddell. Now properly i18n'ed and integrated into
+      standard build system.
+    - Update German translations.
+  * debian/control: Add policykit-kde dependency to jockey-kde.
+  * Add madwifi handler (merged from trunk). This now takes care of properly
+    flipping the blacklisting between ath5k and ath_pci (LP: #323830), and
+    fixes the description and freeness state (LP: #290264)
+  * jockey/oslib.py: Overwrite apt.InstallProgress.fork() to capture the
+    child's stdout/stderr into temporary files, and then send that to logging.
+    Before this, apt/dpkg output was sent to oblivion, making it hard to
+    remotely debug package installation problems. (LP: #280291)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 18 Mar 2009 20:04:01 +0100
+
+jockey (0.5-0ubuntu4) jaunty; urgency=low
+
+  * Merge bug fixes from trunk:
+    - Fix KDE autostart file.
+    - handlers.py: Fix crash if closing /sys file during rebind fails
+      (LP: #335567)
+    - nvidia.py: Do not attempt to rebind driver, it's doomed to fail anyway.
+  * nvidia.py: Remove -libvdpau for driver >= 180, and nvidia-settings, when
+    removing the driver.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 16 Mar 2009 19:26:56 +0100
+
+jockey (0.5-0ubuntu3) jaunty; urgency=low
+
+  * data/handlers/broadcom_wl.py: Fix spelling of the b43legacy module.
+  * data/handlers/broadcom_wl.py: Fix ordering of module loading if b44 is
+    needed/loaded as well: Blacklist b44, and load it in the "install wl"
+    rule, so that wl always comes first. (LP: #333903)
+  * Merge bug fixes from trunk:
+    - oslib.py: Do not grab lsb-release stderr.
+    - oslib.py: Append ".conf" suffix to blacklist file, since current
+      modutils deprecates anything else.
+  * data/handlers/{b43,broadcom_wl}.py: Rename blacklist-bcm43 to
+    blacklist-bcm43.conf, for the same reason.
+  * debian/jockey-common.postinst: Rename blacklist-{bcm43,local} to *.conf on
+    upgrades.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 07 Mar 2009 15:34:09 +0100
+
+jockey (0.5-0ubuntu2) jaunty; urgency=low
+
+  [ Martin Pitt ]
+  * Merge bug fixes from trunk:
+    - Replace Exception.message with str(Exception), since .message is
+      deprecated in Python 2.6.
+  * Python transition: Build for all Python versions again, to work
+    with 2.6. Include links in the .deb, bump python-central
+    build dependency for this.
+  * debian/rules: Drop DEB_PYTHON_INSTALL_ARGS_ALL setting;
+    --no-compile is set by default nowadays, and explicitly setting it
+    hides python-distutils.mk's --install-layout option.
+  * data/handlers/sl_modem.py: Recognize modems which are subdevices
+    of alsa cards, and thus only appear in "aplay -l", not in
+    /proc/asound/cards. Thanks to Peteris Krisjanis for the patch!
+    (LP: #295158)
+
+  [ Mario Limonciello ]
+  * data/handlers/broadcom_wl.py:
+    - if we don't offer b43 at all with the card, and the Broadcom STA
+      driver is loaded, it is implicitly "enabled". (LP: #288211)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 27 Feb 2009 09:04:16 +0100
+
+jockey (0.5-0ubuntu1) jaunty; urgency=low
+
+  * Final 0.5 upstream release. Compared to our previous snapshot this
+    just provides updated translations.
+  * The clean orig.tar.gz now finally drops the erroneous emblems.
+    (LP: #330421)
+  * debian/apport_hook.py: Attach /var/log/jockey.log and hardware
+    information.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 24 Feb 2009 16:47:31 +0100
+
+jockey (0.5~beta3-0ubuntu13) jaunty; urgency=low
+
+  * backend.py, new_used_available(): Always write check cache, so
+    that we avoid starting --check from autostart .desktop if there
+    are no drivers.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 02 Feb 2009 09:57:37 +0100
+
+jockey (0.5~beta3-0ubuntu12) jaunty; urgency=low
+
+  * nvidia.py: Re-enable, current versions should now work with
+    current X.org.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 01 Feb 2009 21:15:37 +0100
+
+jockey (0.5~beta3-0ubuntu11) jaunty; urgency=low
+
+  * Merge bug fixes from trunk:
+    - autostart *.desktop.in: Only run if /var/cache/jockey/check does
+      not exist.
+    - Update D-Bus policy for the backend (LP: #318745)
+    - Move status icons from emblems/ to actions/, emblems/ are wrong.
+  * oslib.py, add_repository(): Intercept {Lock,Fetch}FailedException
+    similarly to install_package(). (LP: #287468)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 29 Jan 2009 17:37:07 +0100
+
+jockey (0.5~beta3-0ubuntu10) jaunty; urgency=low
+
+  * data/handlers/{fglrx,nvidia}.py: Disable for now, they do not
+    currently work with X.org 1.6.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 17 Dec 2008 10:29:26 +0100
+
+jockey (0.5~beta3-0ubuntu9) jaunty; urgency=low
+
+  * Merge from trunk:
+    - jockey-gtk: Enlarge driver list if there are more than 3 available
+      drivers. (LP: #291028)
+    - ui.py: If an activated driver has a package, label the action "Remove",
+      not "Deactivate". (LP: #284435)
+    - Update German translations.
+  * backend/com.ubuntu.DeviceDriver.service: Write debug log to
+    /var/log/jockey.log by default when starting the backend. (LP: #290036)
+  * Add debian/jockey-common.logrotate for rotating jockey.log.
+  * data/handlers/broadcom_wl.py: If b44 is loaded, don't disable the entire
+    handler, but instead install a "wl" modprobe handler which removes ssb and
+    b44 first, then loads wl, and reloads b44 again, which makes both devices
+    work. (LP: #289845)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 28 Nov 2008 11:57:56 +0100
+
+jockey (0.5~beta3-0ubuntu8) jaunty; urgency=low
+
+  * Merge bug fixes from trunk:
+    - Replace enabled/disabled icons with more decent variant, thanks Kenneth
+      Wimer! (LP: #290239)
+    - backend.py: Rewrite timeout behaviour for more robustness; do not time
+      out right after a long method call.
+    - Intercept crashes of the backend (which manifest as D-BUS NoReply
+      error), present an error message, and restart backend. (LP: #273600)
+    - jockey-gtk: Fix crash if nothing is selected in the tree view after an
+      operation. (LP: #283887)
+    - fglrx.py: Unconfigured driver defaults to ati, which already provides
+      compositing. (LP: #285879)
+  * jockey/oslib.py, install_package(): Use --force-confnew to fix hang/crash
+    on "EOF on stdin at conffile prompt", since the jockey backend does not
+    have any terminal or interactivity. This fixes fglrx install failure when
+    the upstream installer was previously used. This still keeps .dpkg-old
+    configuration backups, and using a tool like Jockey should "make it work".
+    (LP: #283765)
+  * data/handlers/b43.py: Add missing OSLib import. (LP: #295530)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 24 Nov 2008 20:31:53 +0100
+
+jockey (0.5~beta3-0ubuntu7) jaunty; urgency=low
+
+  * Merge changes from trunk:
+    - Prevent corrupting the tree view when clicking on the tray applet
+      multiple times. (LP: #278071)
+    - Update translations from Rosetta.
+  * data/handlers/nvidia.py: Unblacklist nvidia driver version 96, it has been
+    fixed in intrepid-proposed (see LP #251107). (LP: #293107)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 10 Nov 2008 17:24:09 +0100
+
+jockey (0.5~beta3-0ubuntu5) intrepid; urgency=low
+
+  * Merge bug fix from trunk:
+    - nvidia.py: Drop constructor check for unsupported legacy versions; at
+      ctor invocation time, the package is not set yet, and this check
+      should not be upstream in the first place.
+    - detection.py: Do not instantiate handlers from DriverDBs which are
+      unavailable. (Pre-requisite for fixing LP #288662)
+  * data/handlers/nvidia.py: Move test for currently unsupported legacy
+    versions (96, 71) to available() where it is actually evaluated.
+    (LP: #288662)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 24 Oct 2008 13:43:22 +0200
+
+jockey (0.5~beta3-0ubuntu4) intrepid; urgency=low
+
+  * Merge bug fix from trunk:
+    - kde/jockey-kde.desktop.in: Launch jockey-kde as root, since
+      policykit-kde does not exist yet. This unbreaks calling it from the
+      menu. Thanks to Alberto Milone for the fix!
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 22 Oct 2008 17:36:08 +0200
+
+jockey (0.5~beta3-0ubuntu3) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - jockey/backend.py, polkit_auth_wrapper(): Also intercept SystemError and
+      other standard exceptions in the case of a PermissionDeniedByPolicy, i.
+      e.  when popping up the PK auth dialog. Fixes (LP: #274639) for real.
+    - po/de.po: Unfuzzify.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 17 Oct 2008 19:51:42 +0200
+
+jockey (0.5~beta3-0ubuntu2) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - OpenPrintingDriverDB: Filter out HTML tags from names, they look ugly
+      and <br> even breaks the display.
+    - jockey-gtk: Increase the default width of the license dialog to fit a
+      standard 80 column text.
+    - ui.py, search_driver(): Increase timeout from default 30 seconds to 10
+      minutes, since driver DB lookup can last quite long (crash fix).
+    - OpenPrintingDriverDB: Disambiguate drivers by their driver name, not by
+      supplier; fixes e. g. splix stable vs. development version conflict.
+    - Backend available(), search_drivers(): Show the recommended drivers
+      first, so that the default GUI selection will not point to a
+      non-recommended one by default.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 16 Oct 2008 21:37:31 +0200
+
+jockey (0.5~beta3-0ubuntu1) intrepid; urgency=low
+
+  * New upstream bug fix release 0.5 beta 3. Compared to our bzr snapshot,
+    this has the following changes:
+    - OpenPrintingDriverDB: Show non-recommended drivers, too, but mark the
+      recommended one appropriately. (LP: #271286)
+    - get_handlers(): If there is just one driver for a HardwareID, do not
+      present it as recommended even if the Driver DB marks it as such, since
+      it is just confusing.
+    - jockey-gtk: If jockey shipped icons are not available (happens in some
+      third-party themes), fall back to stock icons instead of crashing.
+      (LP: #283363)
+  * oslib.py, package_name(): Remove intra-paragraph line breaks; both GUIs
+    already do their own line breaking according to the widget width, and
+    having them in between looks ugly.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 16 Oct 2008 12:56:55 +0200
+
+jockey (0.5~beta2-0ubuntu3) intrepid; urgency=low
+
+  * Merge change from trunk:
+    - openprinting.org lookup: Only search for packaged PPD files, not for
+      cups filters. This is to greatly reduce the potential conflict with
+      distro packages (until the openprinting.org ones get properly
+      namespaced), and also because those filters should generally be supplied
+      as proper Ubuntu packages.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 16 Oct 2008 01:33:17 +0200
+
+jockey (0.5~beta2-0ubuntu2) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - openprinting.org detected handlers: Add supplier and support contacts to
+      long description. (LP: #269454)
+    - backend.py, set_enabled(): Report progress signals early when handling
+      packages, to avoid delays until package manager sends out the first
+      progress. (LP: #279073)
+  * data/handlers/fglrx.py: Enable driver again, current version works now.
+    Also add "Recommends: fglrx-modaliases", so that detection works in a
+    default installation. (LP: #262819)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 15 Oct 2008 00:10:53 +0200
+
+jockey (0.5~beta2-0ubuntu1) intrepid; urgency=low
+
+  * New upstream bug fix release 0.5 beta 2. This does not introduce any
+    actual code changes to our bzr snapshot, but brings down the diff.gz delta
+    to a sane level again.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 13 Oct 2008 18:05:20 +0200
+
+jockey (0.5~beta1-0ubuntu5) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - ui.py: Explicitly set encoding of stdout and stderr to the locale's
+      preferred encoding. Thanks to Colin Watson for the approach.
+      (LP: #280147)
+    - ui.py, set_handler_enabled(): Show SystemErrors in dialog instead of
+      crashing. (LP: #274639)
+    - jockey-kde: Make --check notifications actually work again.
+  * jockey/oslib.py: Clean up error handling on package installation/removal.
+  * jockey-kde: Work around the lack of a PolicyKit KDE user agent by starting
+    the UI through kdesu when clicking on the notification. Add
+    kdebase-runtime dependency for this. (LP: #274189)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 13 Oct 2008 14:40:43 +0200
+
+jockey (0.5~beta1-0ubuntu4) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - Remove any Disable dri2 (in nvidia.py) from the xorg.conf, otherwise
+      nvidia-settings and nvidia-xconfig will fail. [Alberto]
+    - Further clarify fglrx rationale.
+    - Make the nvidia handler raise an AssertionError if the version of the
+      driver is < 173, since they do not work with current X.org. [Alberto]
+  * data/handlers/broadcom_wl.py: Fix crash if wl module is not available.
+    (LP: #280929)
+  * data/handlers/fglrx.py: Raise an exception in the ctor, pointing at
+    LP#247376, since current xorg-driver-fglrx is busted. If this gets fixed
+    in -updates, this needs to be reverted, and a recommends: to
+    fglrx-modaliases needs to be added.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 10 Oct 2008 18:05:37 +0200
+
+jockey (0.5~beta1-0ubuntu3) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+     - Update the name of fglrx; radeonhd etc. are accelerated, too.
+       (LP: #263359)
+     - ui.py, backend(): Re-detect device drivers after the backend timed out.
+       (LP: #273231)
+     - backend.py, set_enabled(): Propagate exceptions from the enable/disable
+       threads. (LP: #278034)
+     - jockey-{gtk,kde}: Fix display of UI elements if no drivers are
+       available. (LP: #277616, #277702)
+     - jockey-kde: Actually show a license dialog when clicking on "Details"
+       for the license. [Alberto]
+     - Fix enabling/disabling of video drivers if multiple cards are
+       configured in xorg.conf. [Alberto]
+     - detection.py, get_printers(): Intercept RuntimeError harder.
+       (LP: #272721)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 06 Oct 2008 13:34:12 +0200
+
+jockey (0.5~beta1-0ubuntu2) intrepid; urgency=low
+
+  * Merge some bug fixes from trunk:
+    - ui.py: Fix "not installed" -> "not activated" string inconsistency.
+      (LP: #274697)
+    - Fix typos in German translation.
+    - Add and use enabled/disabled/free icons from Kenneth Wimer.
+    - Fix jockey-kde crash when no drivers are available. (LP: #278677)
+      [Alberto]
+    - Report indefinite progress if the handler does long non-package
+      operations (such as rebuilding initramfs), instead of freezing the UI.
+    - UI: Select first driver by default, and keep selection after
+      enable/disable. (LP: #274699)
+    - jockey-kde: Fix display of window text and subtext, and adapt it to
+      driver changes. (LP: #274558)
+    - Avoid flickering the progress bar dialog for very fast detect() calls.
+    - jockey-kde: Fix indeterminate progress bar behaviour, and fix "Searching
+      for drivers..." progress bar at startup.
+    - kde/ManagerWindowKDE4.ui: Drop the expander next to the window heading,
+      it prevented proper resizing. (LP: #274700)
+    - Various test suite fixes.
+  * data/handlers/b43.py: Do not show the driver as "in use" if the firmware
+    is not installed.
+  * Add data/handlers/broadcom_wl.py: Handler for the alternative Broadcom
+    'wl' module. Enabling this will automatically blacklist b43 and bcm43xx.
+    (LP: #263097)
+  * data/handlers/b43.py: Remove blacklist-bcm43 on activation.
+  * data/handlers/b43.py: Add (derived) handler for b43legacy. (LP: #247495)
+  * data/handlers/b43.py: Actually call the firmware fetching script after the
+    -fwcutter installation.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 02 Oct 2008 20:44:09 +0200
+
+jockey (0.5~beta1-0ubuntu1) intrepid; urgency=low
+
+  * New upstream release 0.5 beta 1. Compared to our trunk snapshot, this
+    has the following changes:
+    - Fix spawning of "Searching drivers..." progress dialog for invoking the
+      UI through D-BUS.
+    - ui.py: Work around some xgettext false positives, so that they won't
+      appear in the .pot. 
+    - Merge translations, and fully update the German one.
+  * backend/jockey-backend: Fixed merge error which caused the GTK/KDE tests
+    to fail in the ubuntu branch.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 25 Sep 2008 20:47:09 +0200
+
+jockey (0.5~alpha1-0ubuntu5) intrepid; urgency=low
+
+  * Merge bug fixes from trunk:
+    - Fix XorgDriverHandler to not be "used" right after enabling.
+    - Make sure that dri2 is not disabled for fglrx, it crashes amdcccle. (LP:
+      #273320) [Alberto]
+    - Use a "refresh" icon for drivers where a reboot needs to happen. 
+      (LP: #272238) [Alberto]
+    - Fix KDE notification and the related test. Work around segfault when
+      exiting the KDE UI. (LP: #270522) [Alberto]
+    - search_driver(): Return list of installed files in addition to status
+      code. Document the return value in README.txt. (LP: #269311)
+    - Converts search_driver() printer device ID to friendly string (only
+      supports printers for now). (part of LP #269454)
+    - Do not make a backup of xorg.conf if the proprietary driver is already
+      set there, so that we don't automatically revert to a configuration with
+      the proprietary driver after uninstalling exactly that. [Alberto]
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 24 Sep 2008 22:40:22 +0200
+
+jockey (0.5~alpha1-0ubuntu4) intrepid; urgency=low
+
+  * debian/jockey-kde.install: Drop *.ui files, they are not installed by
+    upstream any more (creates .py files at build time now). Fixes FTBFS.
+    Thanks, Alberto Milone!
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 23 Sep 2008 13:58:46 +0200
+
+jockey (0.5~alpha1-0ubuntu3) intrepid; urgency=low
+
+  * Merge some bug fixes from trunk:
+    - Fix search_drivers() to not return unrelated available handlers.
+    - Change --search-driver UIs from confirmation dialog to displaying list
+      of matches. (One half of LP: #269454)
+    - OpenPrintingDriverDB: Show shortdescription and functionality fields.
+      (Other half of LP: #269454)
+    - Drop a lot of redundant probing from add_driverdb() and search_driver().
+    - Build KDE .ui -> python on build time, to avoid runtime uic dependency.
+      (LP: #271317)
+    - nvidia, fglrx handlers: Remove RgbPath option, it causes X.org to crash.
+    - ui.py: Update action button strings according to latest recommendations
+      from Matthew Thomas, thanks!
+    - ui.py: Properly intercept failure to connect to D-BUS. (LP: #258472)
+  * Add python-kde4-dev build dependency, now needed to get pykde4uic.
+  * fglrx, nvidia: Uninstall -kernel-source in disable(), thanks Alberto.
+    (LP: #251962)
+  * jockey/oslib.py, install_package(): Intercept SystemError. (LP: #258713,
+    LP: #272146)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 22 Sep 2008 15:39:42 +0200
+
+jockey (0.5~alpha1-0ubuntu2) intrepid; urgency=low
+
+  * debian/control: Replace python-qt4 dependency with python-kde4, since
+    that's required now. (LP: #263017)
+  * oslib.py, {install,remove}_package(): Intercept apt's LockFailedException
+    and FetchFailedException. (LP: #268850)
+  * oslib.py: Fix typo causing crash in remove_repository(), add test cases.
+    (LP: #269435)
+  * Merge some bug fixes from trunk:
+    - Update KDE UI according to recent GTK ui changes. (LP #268163)
+    - ui.py, set_handler_enable(): Fix reversed logic in determining
+      enable/disable strings. (LP: #269444)
+    - fglrx.py: Fix crash if Device section does not configure a driver
+      (LP: #269565)
+    - Test suite: check handler behaviour with invalid xorg.conf, fix a few
+      crashes uncovered by that. (LP: #258064)
+    - detection.py: Fix crashes if cupsd is not running. (LP: #256780, #255488)
+    - jockey-gtk: Call gtk.init_check() to test $DISPLAY, and print error
+      message instead of crashing. (LP: #234252)
+    - oslib.py, _save_module_blacklist(): Create modules.d directory if it
+      does not exist. (LP: #229065)
+    - jockey-gtk: Add license text dialog and link it to the license button
+      (LP: #269352)
+    - com.ubuntu.devicedriver.policy.in: Allow non-local driver install
+      (auth_admin). (LP: #269175)
+    - Move hardware detection from Backend ctor to separate function, and call
+      that with long D-BUS timeout and progress dialog. (LP: #253224)
+    - Various fixes in test suite.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 16 Sep 2008 08:10:35 -0700
+
+jockey (0.5~alpha1-0ubuntu1) intrepid; urgency=low
+
+  * New upstream release, Alpha 1 of upcoming 0.5:
+    - GTK user interface shows support and license status of a driver now.
+      (jockey-printer-driver-support blueprint).
+    - Refurbished workflow and look of the GTK user interface according to
+      Matthew Paul Thomas' recommendations. (LP: #268163) Corresponding
+      changes to the KDE UI are in the works, and will be merged soon.
+    - Uses X-Kit instead of guidance-backends now, update dependency.
+      (LP: #269057)
+    - Fix a few regressions of the PyKDE 4 port.
+    - Add support for recommended driver versions in the case of multiple
+      different available versions (such as with the Nvidia driver).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 12 Sep 2008 11:57:48 +0200
+
+jockey (0.4.1+r360-0ubuntu1) intrepid; urgency=low
+
+  * New upstream snapshot:
+   - Port KDE frontend to PyKDE, by Jonathan Thomas
+
+ -- Jonathan Riddell <jriddell@ubuntu.com>  Tue, 26 Aug 2008 16:57:30 +0100
+
+jockey (0.4+r354-0ubuntu1) intrepid; urgency=low
+
+  * New upstream snapshot:
+    - Add session D-BUS interface for jockey-gtk, so that programs like
+      system-config-printer can use the "search_driver" API to request a
+      driver for a particular hardware component with getting GUI.
+    - Full backend integration of OpenPrinting.org driver search.
+    - Various bug fixes.
+  * jockey/oslib.py: Use python-apt instead of calling apt-get, to get numeric
+    progress reporting instead of just pulsating.
+  * Add python-apt dependency, Ubuntu oslib.py uses it now.
+  * Bump Standards-Version (no changes).
+  * Bump debhelper build dependency version for dh_icons, thanks lintian.
+  * jockey/oslib.py: Provide an apt implementation for
+    {add,remove}_repository() and repository_enabled().
+  * backend/jockey-backend: Enable the OpenPrinting.org driver lookup by
+    default, so that we can test it in intrepid. There is no UI to point out
+    that these are community provided drivers, this will be done in a later
+    release.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Aug 2008 18:21:08 +0200
+
+jockey (0.4+r345-0ubuntu1) intrepid; urgency=low
+
+  * Use upstream snapshot as orig.tar.gz, so that file executable permissions
+    do not get lost when they are shipped in the diff.gz. This caused the
+    backend to be installed non-executable. (LP: #251347)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 24 Jul 2008 14:24:24 +0200
+
+jockey (0.4-0ubuntu2) intrepid; urgency=low
+
+  * jockey/oslib.py, {install,remove}_package(): Explicitly set $PATH, so that
+    apt-get and dpkg have a chance of working when being called from a D-BUS
+    spawned process (whose environment has virtually nothing at all).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 23 Jul 2008 23:41:14 +0200
+
+jockey (0.4-0ubuntu1) intrepid; urgency=low
+
+  * New upstream release 0.4:
+    - Implements an XML-RPC client for querying a driver database, as
+      specified on this year's LinuxFoundation Collaboration Summit. There is
+      no server implementation for this yet, though.
+    - Add general support for third-party repositories and packages not yet
+      known to the local system. In the course of this, the functionality of
+      DriverPackageHandler became merged into the generic Handler class, and
+      ModulePackageHandler became obsolete (KernelModuleHandler now does all
+      of this). This made the code a bit shorter and easier, too.
+    - Add support for python-coverage in the test suite, and add a lot of
+      missing tests.
+    - Lots of bug fixes.
+  * Update to current trunk bzr head:
+    - Split into privileged D-BUS backend and unprivileged frontends, control
+      access with PolicyKit. This gets rid of the nasty "gksu/kdesu myself"
+      code, and makes the service more useful for other desktop applications
+      which look for drivers.
+    - Support fourth field in modalias files for specifying a package name (as
+      done by nvidia-XX-modaliases packages).
+    - Update NVidia handler to get along with the multiple-versions packages
+      in Intrepid.
+  * debian/jockey-common.install: Install D-BUS and PolicyKit configuration
+    files, and jockey-backend program.
+  * data/handlers/b43.py: Update to new upstream infrastructure.
+  * jockey/oslib.py: Reimplement {install,remove}_package() using simple
+    apt-get calls, with no precise progress information. This is a
+    quick'n'dirty hack for Intrepid Alpha-3, so that the user at least gets
+    some kind of visual feedback on package installation. This will be cleaned
+    up later.
+  * debian/control: Add python-dbus, policykit dependencies to -common, and
+    policykit-gnome dependency to -gtk.
+  * debian/control: Recommend nvidia-common to provide out-of-the-box
+    detection of nvidia cards, and their matching driver.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 23 Jul 2008 16:38:17 +0200
+
+jockey (0.3.3-0ubuntu10) intrepid; urgency=low
+
+  * Drop Recommends: of linux-restricted-modules. They transitively pull in
+    lilo into ubuntu-desktop, and with the split-out fglrx and nvidia drivers
+    they do not even make sense any more.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 14 Jul 2008 09:54:22 +0100
+
+jockey (0.3.3-0ubuntu9) intrepid; urgency=low
+
+  * Upload fixes from hardy-proposed to intrepid.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 05 May 2008 20:49:10 +0200
+
+jockey (0.3.3-0ubuntu8) hardy-proposed; urgency=low
+
+  * fglrx.py: Do not override already installed third-party fglrx driver with
+    --check-composite. (LP: #221968)
+  * debian/control: Updated Vcs-Bzr: to point to the hardy branch.
+  * XorgDriverHandler, nvidia, fglrx: Set identifiers for newly created
+    sections, they are invalid without one. Thanks to Laszlo Pandy!
+    (LP: #218478)
+  * nvidia.py: Fix "enabled" handling: check if the package is installed and
+    module not blacklisted. (LP: #216650)
+  * OSLib.open_app(): Wait until the subprocess returned, so that we can check
+    the system state afterwards. (prerequisite for change below)
+  * jockey/ui.py, --check-composite: Re-check the system after attempting to
+    enable the driver, and only signal success (exit with 0) if the driver was
+    actually enabled. Otherwise, cancelling installation would invalidly
+    signal success to the caller. (LP: #208026)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 28 Apr 2008 19:24:11 +0200
+
+jockey (0.3.3-0ubuntu7) hardy; urgency=low
+
+  * Cherrypick a few bug fixes from trunk:
+    - nvidia.py: Drop AddARGBVisuals and AddARGBGLXVisuals options from legacy
+      driver. (LP: #211752)
+    - fglrx.py: Fix detection of autodetected radeon driver. (LP: #207957)
+    - jockey/ui.py: Intercept IOErrors when writing to stderr. (LP: #204120)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 08 Apr 2008 19:34:23 -0500
+
+jockey (0.3.3-0ubuntu6) hardy; urgency=low
+
+  * Cherrypick a few bug fixes from trunk:
+    - nvidia.py: Fix extra screen options to get quoted properly.
+      (LP: #211368)
+    - autostart .desktop files: Add Comment field. (LP: #146918)
+    - POTFILES.in: Add missing desktop files.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 06 Apr 2008 11:24:00 -0600
+
+jockey (0.3.3-0ubuntu5) hardy; urgency=low
+
+  * jockey/oslib.py: Fix undeclared 'env' variable, residue from fix in
+    0.3.3-0ubuntu3. (LP: #189611)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 04 Apr 2008 09:16:08 +0200
+
+jockey (0.3.3-0ubuntu4) hardy; urgency=low
+
+  * debian/jockey-common.postinst: Remove old restricted-manager autostart XDG
+    file on upgrades.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 03 Apr 2008 18:07:22 +0200
+
+jockey (0.3.3-0ubuntu3) hardy; urgency=low
+
+  * jockey/oslib.py: Do not set debconf priority to critical any more.
+    b43-fwcutter needs the "download firmware" question shown in order to
+    actually download the firmware, and we do not need it ATM for other
+    packages. (LP: #197819)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 03 Apr 2008 14:49:12 +0200
+
+jockey (0.3.3-0ubuntu2) hardy; urgency=low
+
+  * Merge to upstream trunk to pick up a few bug fixes:
+    - nvidia.py: Add AddARGBGLXVisuals option to Screen section for
+      nvidia-glx.  (LP: #154596)
+    - nvidia.py: Do not advertise as enabling composite if driver is already
+      loaded (i. e. installed manually). (LP: #202802)
+    - fglrx.py: Do not suggest installing fglrx if using the radeon X.org
+      driver, since that already supports composite (LP: #207957)
+    - jockey/ui.py: Change --update-db to print an error message instead of
+      exception (LP: #209594)
+    - If rebinding a module fails, trigger reboot notification. (LP: #207928)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 01 Apr 2008 20:40:50 +0200
+
+jockey (0.3.3-0ubuntu1) hardy; urgency=low
+
+  * New upstream bug fix release:
+    - jockey/xorg_driver.py: Check if _row attribute is present, which is not
+      the case for Subsections in the "Module" section. (LP: #201160)
+    - Make --check-composite ask for confirmation. (LP: #202898)
+    - Enable AddARGBGLXVisuals option for standard nvidia driver.
+      (LP: #154596)
+    - KDE: Do not change check boxes  if enabling was cancelled.
+    - KDE: Drop unicode() conversion in confirm_action(), strings are already
+      unicode (LP: #206169)
+    - KDE: Disable help button if help is not available. (LP #206169)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 27 Mar 2008 12:41:53 +0100
+
+jockey (0.3.2-0ubuntu3) hardy; urgency=low
+
+  * Cherrypick some bug fixes from trunk:
+    - Add automatic testing for all shipped custom handlers in examples/ and
+      data/handlers/. So far the test suite only covered the standard
+      handlers.
+    - This uncovered that the fglrx and nvidia handlers still crash if
+      xorg.conf does not have a Screen section; fixed for real now.
+      (LP: #200832)
+  * data/handlers/b43.py: Add missing import (also uncovered by above test
+    suite). (LP: #203958)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 20 Mar 2008 16:30:32 +0100
+
+jockey (0.3.2-0ubuntu2) hardy; urgency=low
+
+  * Final 0.3.2 release (previous Ubuntu upload had a botched version number)
+    with bug fixes only (no new features). This time also with orig.tar.gz
+    again.
+    - fglrx, nvidia handlers: Create screen section if it does not exist.
+      (LP: #200832)
+    - Abort gracefully with a proper error message if cache directory does not
+      exist. (LP: #198433)
+    - ui.py, check(): Intercept ValueError from package query. This can happen
+      if the daily apt cron job runs while jockey is running as well and
+      temporarily causes inconsistent package indexes. (LP: #200089)
+    - kde/jockey-kde, comfirm_action(): Fix string formatting. (LP: #197777)
+    - jockey/oslib.py: Fix calling of kdesu.
+    - kde/jockey-kde: Make --check notifications actually work (LP: #193985)
+    - Fix the KDE interface test suite.
+  * debian/rules: Fix apport hook file name.
+  * debian/apport_hook.py: Add missing import.
+  * data/handlers/b43.py: Consider driver enabled if firmware files are
+    installed; testing whether b43-fwcutter is installed (the default
+    behaviour of ModulePackageHandler) is incorrect here. (LP: #198341)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 18 Mar 2008 17:28:32 +0100
+
+jockey (0.3.2-0ubuntu1) hardy; urgency=low
+
+  * New upstream bug fix release for KDE frontend changes:
+    - Add Oxygen icon
+    - Resize columns to text
+    - Nodes expanded by default
+
+ -- Ryan Kavanagh <ryanakca@kubuntu.org>  Thu, 13 Mar 2008 19:26:16 +0000
+
+jockey (0.3.1-0ubuntu1) hardy; urgency=low
+
+  * New upstream bug fix release:
+    - Fix 'used' detection of nVidia driver.
+    - Add README.txt.
+    - Create default xorg.conf if it does not exist.
+    - More efficient modalias data structures for great detection stage
+      speedup (typically from > 5 to about 1 second).
+    - Run --check with niceness 10 and change autostart desktop files to delay
+      it by a minute, so that it does not slow down session startup.
+    - Fix --enable and --disable to not ask for confirmation, otherwise they
+      are useless in noninteractive scripts.
+  * oslib.py: Cache "apt-cache show" results.
+  * oslib.py: If we do not have a $DISPLAY, just call apt-get, not
+    x-terminal-emulator.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 10 Mar 2008 15:42:03 +0100
+
+jockey (0.3-0ubuntu1) hardy; urgency=low
+
+  * Merge with trunk to update to the 0.3 release. We already had all the new
+    features like the KDE interface, so this only imports bug fixes, in
+    particular:
+    - Update fglrx handler for current upstream version, to actually work
+      again at all (DisplayDepth) and declare support for composite. Thanks to
+      Sander Jonkes! (LP: #194963)
+    - Quiesce backtraces from failed handler instantiation. (LP: #195548)
+    - Use regular expressions, not fnmatch for modalias pattern matching,
+      since we do not want to treat '[' and ']' specially. (LP: #193521)
+    - Port --enable and --disable options from restricted-manager.
+      (LP: #181832)
+    - Port --check-composite from restricted-manager. (LP: #193978)
+  * Fixed Vcs-Bzr field.
+  * Remove do-release from this branch, it's only useful for upstream
+    developers on trunk and confusing in the package.
+  * debian/jockey-common.postinst: Remove --check cache on upgrade from 
+    << 0.3, since the format changed (much more robust now).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 04 Mar 2008 16:48:50 +0100
+
+jockey (0.2-0ubuntu6) hardy; urgency=low
+
+  * rebuild due to python-central issue
+
+ -- Sebastien Bacher <seb128@canonical.com>  Tue, 19 Feb 2008 22:08:52 +0100
+
+jockey (0.2-0ubuntu5) hardy; urgency=low
+
+  * Add debug logging for enabled() to XorgDriver and ModulePackageHandler.
+    (Cherrypicked from trunk)
+  * Make window title consistent to .desktop files. (LP: #189689)
+    (Cherrypicked from trunk)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 19 Feb 2008 09:38:46 +0100
+
+jockey (0.2-0ubuntu4) hardy; urgency=low
+
+  * Merged Martin Böhm's KDE implementation, thanks a lot!
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 14 Feb 2008 18:55:10 +0100
+
+jockey (0.2-0ubuntu3) hardy; urgency=low
+
+  * At least on current kernel, devices on the SSB bus do not produce modalias
+    files, they just mention it in 'uevent'. Add detection for those, so that
+    autodetection of Broadcom wifis (b43 driver) works. (Cherrypicked from
+    trunk).
+  * Do not ignore custom handlers which wrap a standard kernel module (which
+    are ignored by default). (Cherrypicked from trunk)
+  * Add data/handlers/b43.py: Handler for the b43 Broadcom Wifi module.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 11 Feb 2008 09:58:23 +0100
+
+jockey (0.2-0ubuntu2) hardy; urgency=low
+
+  * Stop running the tests during build, they need too many build deps.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 05 Feb 2008 09:30:48 +0100
+
+jockey (0.2-0ubuntu1) hardy; urgency=low
+
+  * New upstream bug fix release:
+    - Do not create default handlers for nonexisting kernel modules.
+      (LP: #187148)
+    - Suppress exceptions (like SIGPIPE) in logging. (LP: #188658)
+    - Enable UseEdidFreqs for legacy NVidia driver. (LP: #151141)
+    - Set proper window icon. (LP: #187073)
+    - Clean up strings in .desktop files (LP: #150205)
+    - Fix test suite exit code on success.
+    - Do not set AddARGB{,GLX}Visuals options in standard and new nVidia
+      handler any more (obsolete).
+    - Support hiding of help button if help is not available.
+  * tests/oslib.py: Add simple tests for Ubuntu implementation of package
+    system query functions.
+  * jockey/oslib.py, package_description(): Do not crash when apt-cache show
+    succeeds, but prints nothing. This works around apt bug #18306.
+    (LP: #186943)
+  * tests/oslib.py: Add shallow test cases for {install,remove}_packge() to
+    ensure that they won't crash for the simplest reasons. This reproduces
+    #186584.
+  * jockey/oslib.py: Add missing import of time. (LP: #186584, #186883)
+  * jockey/oslib.py, ui_help_available(): Only show help if yelp is present.
+    (LP: #186179)
+  * debian/rules: Run test suite during build (failure causes FTBFS).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 04 Feb 2008 18:53:26 +0100
+
+jockey (0.1-0ubuntu1) hardy; urgency=low
+
+  * First upstream release 0.1:
+    - Add installed_packages status file, so that the ubiquity hook actually
+      works.
+    - Add test suite for GTK frontend (run through all widgets).
+    - Import usable translations from restricted-manager.
+    - Some internal code architecture cleanup.
+    - Some bug fixes, particularly in FirmwareHandler and build system.
+  * debian/rules: Remove POT on clean.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 31 Jan 2008 12:53:36 +0100
+
+jockey (0.1~r139) hardy; urgency=low
+
+  * Add missing python-distutils-extra dependency.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 25 Jan 2008 09:20:43 +0000
+
+jockey (0.1~r118) hardy; urgency=low
+
+  * Initial release, result of completely rewriting restricted-manager to be
+    maintainable, robust, and suitable for other distributions. Some features
+    and the KDE UI still need to be ported.
+  * See restricted-manager-rewrite specification for details.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 17 Jan 2008 15:02:40 +0100

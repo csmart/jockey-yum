@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+DEB_VERSION=$(shell dpkg-parsechangelog | grep ^Version | cut -f2 -d\ |cut -f1 -d-)
+
+%:
+	dh "$@" --with translations,python2
+
+override_dh_install:
+	dh_install
+	install -m0644 -D debian/apport_hook.py \
+		debian/jockey-common/usr/share/apport/package-hooks/source_jockey.py
+	install -m0755 -D debian/jockey.ubiquity \
+		debian/jockey-common/usr/lib/ubiquity/target-config/31jockey_pkgs
+	mkdir -p debian/dh-modaliases/usr/share/man/man1
+	pod2man -c Debhelper -r "$(DEB_VERSION)" debian/debhelper/dh_modaliases debian/dh-modaliases/usr/share/man/man1/dh_modaliases.1

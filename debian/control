@@ -1,0 +1,77 @@
+Source: jockey
+Section: admin
+Priority: optional
+Build-Depends: debhelper (>= 7.0.50~), 
+ dh-translations,
+ python-distutils-extra (>= 2.4),
+ python (>= 2.7)
+Maintainer: Martin Pitt <martin.pitt@ubuntu.com>
+Standards-Version: 3.9.1
+XS-Python-Version: >= 2.7
+Vcs-Bzr: https://code.launchpad.net/~ubuntu-core-dev/jockey/ubuntu
+
+Package: jockey-common
+Architecture: all
+XB-Python-Version: ${python:Versions}
+Depends: ${python:Depends},
+ ${misc:Depends},
+ python-xkit,
+ python-dbus,
+ python-apt,
+ python-pycurl,
+ policykit-1,
+Recommends: nvidia-common (>= 0.2.15.1)
+Description: user interface and desktop integration for driver management
+ Jockey provides a user interface for configuring third-party drivers,
+ such as the Nvidia and ATI fglrx X.org and various Wireless LAN
+ kernel modules.
+ .
+ This package contains the common data shared between the frontends.
+
+Package: jockey-gtk
+Architecture: all
+Depends: ${python:Depends},
+ ${misc:Depends},
+ jockey-common (= ${binary:Version}),
+ python-gobject (>= 2.27.91),
+ gir1.2-gtk-3.0,
+ gir1.2-notify-0.7,
+ gir1.2-appindicator3-0.1,
+ policykit-1-gnome
+Description: GNOME user interface and desktop integration for driver management
+ Jockey provides a user interface for configuring third-party drivers,
+ such as the Nvidia and ATI fglrx X.org and various Wireless LAN
+ kernel modules.
+ .
+ This package contains the GNOME frontend.
+
+Package: jockey-kde
+Architecture: all
+Depends: ${python:Depends},
+ ${misc:Depends},
+ jockey-common (= ${binary:Version}),
+ python-kde4,
+ kdebase-runtime
+Replaces: jockey-common (<= 0.5.2)
+Description: KDE user interface and desktop integration for driver management
+ Jockey provides a user interface for configuring third-party drivers,
+ such as the Nvidia and ATI fglrx X.org and various Wireless LAN
+ kernel modules.
+ .
+ This package contains the KDE frontend.
+
+Package: dh-modaliases
+Architecture: all
+Depends: ${perl:Depends},
+ ${misc:Depends}
+Enhances: debhelper
+Description: debhelper extension for scanning kernel module aliases
+ dh_modaliases is useful for packages that ship third-party kernel modules,
+ either in binary form, or as sources (with e. g. DKMS). It extracts the
+ modules' modaliases from either the compile .ko files themselves (for packages
+ which ship them in compiled form, using modinfo), or from a package file
+ debian/packagename.modaliases.
+ .
+ This enables software which is looking for missing driver packages (such as
+ Jockey or the operating system installer) to identify which package(s) will
+ provide a driver for a piece of hardware, identified by its modalias.

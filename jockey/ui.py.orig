@@ -671,7 +671,7 @@ class AbstractUI(dbus.service.Object):
             return False
         except BackendCrashError:
             self._dbus_iface = None
-            self.error_message('', '%s\n\n  ubuntu-bug jockey-common\n\n%s' % (
+            self.error_message('', '%s\n\n  https://launchpad.net/jockey/+filebug\n\n%s' % (
                 self._('Sorry, the Jockey backend crashed. Please file a bug at:'),
                 self._('Trying to recover by restarting backend.')))
             return False
@@ -901,10 +901,11 @@ class AbstractUI(dbus.service.Object):
         self.ui_init() # we want to show progress
         self.have_ui = True
         self.search_only = False
-        # Ubuntu does not currently support local printer driver handlers, so
-        # let's speed up the lookup of remote ones
-        if hwid.startswith('printer_deviceid:'):
-            self.search_only = True
+        # Note: This could be set to True if we know that we only look for
+        # remote drivers. E. g. if you don't support local printer driver
+        # handlers, you could do:
+        #if hwid.startswith('printer_deviceid:'):
+        #    self.search_only = True
 
         b = self.backend()
 
