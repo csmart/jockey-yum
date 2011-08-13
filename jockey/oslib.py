@@ -125,17 +125,10 @@ class OSLib:
     def is_package_free(self, package):
         '''Return if given package is free software.'''
 
-        pkcon = subprocess.Popen(['pkcon', '--filter=newest', 
-            'get-details', package], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        m = re.search("^\s*license:\s*'?(.*)'?$", out, re.M)
-        if m:
-            # TODO: check more licenses here
-            return m.group(1).lower().startswith('gpl') or \
-                m.group(1).lower() in ('free', 'bsd', 'mpl')
+        pkg = self._yum.pkgSack.returnNewestByName(package)
+        if pkg.license:
+            pkg.license.lower().startswith('gpl') or \
+                pkg.license.lower() in ('free', 'bsd', 'mpl')
         else:
             raise ValueError('package %s does not exist' % package)
 
@@ -254,11 +247,11 @@ class OSLib:
 
         Currently defined values: apt, yum
         '''
-        if os.path.exists('/etc/apt/sources.list') or os.path.exists(
-            '/etc/apt/sources.list.d'):
-            return 'apt'
-        elif os.path.exists('/etc/yum.conf'):
+        if os.path.exists('/etc/yum.conf'):
             return 'yum'
+        elif os.path.exists('/etc/apt/sources.list') or \
+            os.path.exists('/etc/apt/sources.list.d'):
+            return 'apt'
 
         raise NotImplementedError('local packaging system is unknown')
 
@@ -347,8 +340,7 @@ class OSLib:
 
     def repository_enabled(self, repository):
         '''Check if given repository is enabled.'''
-
-        raise NotImplementedError('subclasses need to implement this')
+        return repository in [repo.id for repo in self._yum.repos.listEnabled()]
 
     def ui_help_available(self, ui):
         '''Return if help is available.
