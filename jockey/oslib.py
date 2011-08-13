@@ -20,6 +20,8 @@
 import fcntl, os, subprocess, sys, logging, re, tempfile, time, shutil
 from glob import glob
 
+import yum
+
 class OSLib:
     '''Encapsulation of operating system/Linux distribution specific operations.'''
 
@@ -37,6 +39,10 @@ class OSLib:
         os.uname()[2]. This is primarily useful for distribution installers
         where the target system kernel differs from the installer kernel.
         '''
+        
+        # create an instance of yum
+        self._yum = yum.YumBase()
+        
         # relevant stuff for clients and backend
         self._get_os_version()
 
@@ -53,7 +59,7 @@ class OSLib:
 
         # path to a modprobe.d configuration file where kernel modules are
         # enabled and disabled with blacklisting
-        self.module_blacklist_file = '/etc/modprobe.d/blacklist-local.conf'
+        self.module_blacklist_file = '/etc/modprobe.d/blacklist.conf'
 
         # path to modinfo binary
         self.modinfo_path = '/sbin/modinfo'
@@ -89,15 +95,15 @@ class OSLib:
         # This is used for downloading GPG key fingerprints for
         # openprinting.org driver packages.
         self.ssl_cert_file_paths = [
-                # Debian/Ubuntu use the ca-certificates package:
-                '/etc/ssl/certs/ca-certificates.crt'
+                # Fedora use the ca-certificates package:
+                '/etc/pki/tls/certs/ca-bundle.crt'
                 ]
 
         # default GPG key server
         # this is the generally recommended DNS round-robin, but usually very
         # slow:
         #self.gpg_key_server = 'keys.gnupg.net'
-        self.gpg_key_server = 'hkp://keyserver.ubuntu.com:80'
+        self.gpg_key_server = 'hkp://subkeys.pgp.net'
 
         if target_kernel:
             self.target_kernel = target_kernel
@@ -112,7 +118,7 @@ class OSLib:
         self.kernel_header_package = None
 
     # 
-    # The following package related functions use PackageKit; if that does not
+    # The following package related functions use Yum; if that does not
     # work for your distribution, they must be reimplemented
     #
 
@@ -135,28 +141,17 @@ class OSLib:
 
     def package_installed(self, package):
         '''Return if the given package is installed.'''
-
-        pkcon = subprocess.Popen(['pkcon', 'resolve', package],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = pkcon.communicate()[0]
-        return pkcon.returncode == 0 and '\ninstalled ' in out.lower()
+        return self._yum.isPackageInstalled(package)
 
     def package_description(self, package):
         '''Return a tuple (short_description, long_description) for a package.
         
         This should raise a ValueError if the package is not available.
         '''
-        pkcon = subprocess.Popen(['pkcon', '--filter=newest', 
-            'get-details', package], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        m = re.search("^\s*description:\s*'?(.*?)'?$", out, re.M | re.S)
-        if m:
-            # TODO: short description (not accessible with pkcon)
-            return (package, m.group(1))
-        else:
+        try:
+            pkg = self._yum.pkgSack.returnNewestByName(package)[0]
+            return (pkg.returnSimple('summary'), pkg.returnSimple('description'))
+        except yum.Errors.PackageSackError:
             raise ValueError('package %s does not exist' % package)
 
     def package_files(self, package):
@@ -164,15 +159,10 @@ class OSLib:
         
         This should raise a ValueError if the package is not installed.
         '''
-        pkcon = subprocess.Popen(['pkcon', '--filter=installed', 
-            'get-files', package], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we send an "1" to select package if several versions 
-        # are available (--filter is broken in at least Fedora 10)
-        out = pkcon.communicate('1\n')[0]
-        if pkcon.returncode == 0 and '\n  ' in out:
-            return [l.strip() for l in out.splitlines() if l.startswith('  ')]
-        else:
+        try:
+            pkg = self._yum.rpmdb.returnNewestByName(package)[0]
+            return pkg.filelist
+        except yum.Errors.PackageSackError:
             raise ValueError('package %s is not installed' % package)
 
     def install_package(self, package, progress_cb, repository=None,
@@ -203,41 +193,16 @@ class OSLib:
         should be raised as a SystemError.
         '''
         if repository or fingerprint:
-            raise NotImplementedError('PackageKit default implementation does not currently support repositories or fingerprints')
+            raise NotImplementedError('Yum default implementation does not currently support repositories or fingerprints')
 
         # this will check if the package exists
         self.package_description(package)
 
-        pkcon = subprocess.Popen(['pkcon', 'install', '-v', package],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        re_progress = re.compile('progress-changed (\d+), (\d+),')
-
-        phase = None
-        err = ''
-        fail = False
-        while pkcon.poll() == None:
-            line = pkcon.stdout.readline()
-            if line == '':
-                break
-            if fail:
-                err += line
-            if 'status-changed download' in line:
-                phase = 'download'
-            elif 'status-changed commit' in line:
-                phase = 'install'
-            elif progress_cb and 'progress-changed' in line:
-                m = re_progress.search(line)
-                if m and phase:
-                    progress_cb(phase, int(m.group(1)), int(m.group(2)))
-                else:
-                    progress_cb(phase or 'download', -1, -1)
-            elif 'WARNING' in line:
-                fail = True
-
-        err += pkcon.stderr.read()
-        if pkcon.wait() != 0 or not self.package_installed(package):
-            raise SystemError('package %s failed to install: %s' % (package, err)) 
+        try:
+            transaction = self._yum.install(package)
+            self._yum.runTransaction(transaction)
+        except Exception, error:
+            raise SystemError('package %s failed to install: %s' % (package, error))
             
     def remove_package(self, package, progress_cb):
         '''Uninstall the given package.
@@ -252,35 +217,11 @@ class OSLib:
 
         Any removal failure should be raised as a SystemError.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'remove', '-v', package],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        re_progress = re.compile('progress-changed (\d+), (\d+),')
-
-        have_progress = False
-        err = ''
-        fail = False
-        while pkcon.poll() == None:
-            line = pkcon.stdout.readline()
-            if line == '':
-                break
-            if fail:
-                err += line
-            if 'status-changed remove' in line:
-                have_progress = True
-            elif progress_cb and 'progress-changed' in line:
-                m = re_progress.search(line)
-                if m and have_progress:
-                    progress_cb(int(m.group(1)), int(m.group(2)))
-                else:
-                    progress_cb(-1, -1)
-            elif 'WARNING' in line:
-                fail = True
-
-        err += pkcon.stderr.read()
-        pkcon.wait()
-        if self.package_installed(package):
-            raise SystemError('package %s failed to remove: %s' % (package, err)) 
+        try:
+            transaction = self._yum.remove(package)
+            self._yum.runTransaction(transaction)
+        except Exception, error:
+            raise SystemError('package %s failed to remove: %s' % (package, error))
 
     def has_repositories(self):
         '''Check if package repositories are available.
@@ -288,12 +229,7 @@ class OSLib:
         This might not be the case after a fresh installation, when package
         indexes haven't been downloaded yet.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'get-details', 'bash'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = pkcon.communicate()[0]
-        # PK can't detect package sizes without repositories
-        m = re.search("^\s*size:\s*0 bytes$", out, re.M)
-        return m == None
+        return bool(self._yum.repos.listEnabled())
 
     def update_repository_indexes(self, progress_cb):
         '''Download package repository indexes.
@@ -305,15 +241,13 @@ class OSLib:
         regularly. Passes '-1' for current and/or total if time cannot be
         determined.
         '''
-        pkcon = subprocess.Popen(['pkcon', 'refresh'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        while pkcon.poll() == None:
-            time.sleep(0.3)
-            if progress_cb:
-                progress_cb(-1, -1)
-        pkcon.wait()
-        return self.has_repositories()
+        result = False
+        try:
+            self._yum.repos.populateSack('all', 'metadata')
+            result = self.has_repositories()
+        except Errors.RepoError:
+            pass
+        return result
 
     def packaging_system(self):
         '''Return packaging system.
