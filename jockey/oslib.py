@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # (c) 2007 Canonical Ltd.
+# (c) 2011 Chris Smart <chris@kororaa.org>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -125,10 +126,11 @@ class OSLib:
     def is_package_free(self, package):
         '''Return if given package is free software.'''
 
-        pkg = self._yum.pkgSack.returnNewestByName(package)
-        if pkg.license:
-            pkg.license.lower().startswith('gpl') or \
-                pkg.license.lower() in ('free', 'bsd', 'mpl')
+        pkg = self._yum.pkgSack.returnNewestByName(package)[0]
+        license = pkg.returnSimple('license')
+        if license:
+            license.lower().startswith('gpl') or \
+                license.lower() in ('free', 'bsd', 'mpl')
         else:
             raise ValueError('package %s does not exist' % package)
 
