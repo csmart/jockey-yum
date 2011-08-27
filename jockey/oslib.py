@@ -77,11 +77,11 @@ class OSLib:
         # default paths to modalias files (directory entries will consider all
         # files in them)
         self.modaliases = [
-            '/lib/modules/%s/modules.alias' % os.uname()[2],
+        #    '/lib/modules/%s/modules.alias' % os.uname()[2],
             '/usr/share/jockey/modaliases/',
         ]
 
-        # path to X.org configuration file
+        # path to X.org configuration filepci:v00008086d00001502sv000017AAsd000021CEbc02sc00i00
         self.xorg_conf_path = '/etc/X11/xorg.conf'
 
         self.set_backup_dir()
@@ -97,7 +97,7 @@ class OSLib:
         # openprinting.org driver packages.
         self.ssl_cert_file_paths = [
                 # Fedora use the ca-certificates package:
-                '/etc/pki/tls/certs/ca-bundle.crt'
+                '/etc/ssl/certs/ca-bundle.crt'
                 ]
 
         # default GPG key server
