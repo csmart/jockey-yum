@@ -81,7 +81,7 @@ class OSLib:
             '/usr/share/jockey/modaliases/',
         ]
 
-        # path to X.org configuration filepci:v00008086d00001502sv000017AAsd000021CEbc02sc00i00
+        # path to X.org configuration file
         self.xorg_conf_path = '/etc/X11/xorg.conf'
 
         self.set_backup_dir()
@@ -192,10 +192,12 @@ class OSLib:
 
         # this will check if the package exists
         self.package_description(package)
-
+        
         try:
-            transaction = self._yum.install(package)
-            self._yum.runTransaction(transaction)
+            pkg = self._yum.pkgSack.returnNewestByName(package)[0]
+            self._yum.install(pkg)
+            self._yum.buildTransaction()
+            self._yum.processTransaction()
         except Exception, error:
             raise SystemError('package %s failed to install: %s' % (package, error))
             
@@ -213,8 +215,10 @@ class OSLib:
         Any removal failure should be raised as a SystemError.
         '''
         try:
-            transaction = self._yum.remove(package)
-            self._yum.runTransaction(transaction)
+            pkg = self._yum.pkgSack.returnNewestByName(package)[0]
+            self._yum.remove(pkg)
+            self._yum.buildTransaction()
+            self._yum.processTransaction()
         except Exception, error:
             raise SystemError('package %s failed to remove: %s' % (package, error))
 
