@@ -1,6 +1,6 @@
 Name:		jockey
 Version:	0.9.3
-Release:	2%{?dist}
+Release:	1%{?dist}.2
 Summary:	Jockey driver manager
 
 Group:		System Environment/Base
@@ -13,7 +13,7 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch:	noarch
 
 BuildRequires:	desktop-file-utils gettext intltool python2-devel python-distutils-extra
-Requires:	dbus-python pygobject2 pyxdg python-xkit python-distutils-extra python-pycurl polkit
+Requires:	dbus-python pygobject2 pyxdg python-xkit python-distutils-extra python-pycurl polkit yum
 
 %description
 Jockey provides a user interface and desktop integration 
@@ -44,7 +44,6 @@ This package provides a GTK interface for Jockey.
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --root %{buildroot}
 mkdir -p %{buildroot}%{_var}/cache/%{name}
-#mkdir -p %{buildroot}%{_datadir}/%{name}/modaliases
 install data/modaliases/rpmfusion-modules.aliases %{buildroot}%{_datadir}/%{name}/modaliases/
 cp -r handlers %{buildroot}%{_datadir}/%{name}/
 
