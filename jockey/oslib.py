@@ -215,7 +215,7 @@ class OSLib:
         Any removal failure should be raised as a SystemError.
         '''
         try:
-            pkg = self._yum.pkgSack.returnNewestByName(package)[0]
+            pkg = self._yum.rpmdb.returnNewestByName(package)[0]
             self._yum.remove(pkg)
             self._yum.buildTransaction()
             self._yum.processTransaction()
@@ -228,7 +228,7 @@ class OSLib:
         This might not be the case after a fresh installation, when package
         indexes haven't been downloaded yet.
         '''
-        return bool(self._yum.repos.listEnabled())
+        return bool(self._yum.repos.listEnabled())h
 
     def update_repository_indexes(self, progress_cb):
         '''Download package repository indexes.
