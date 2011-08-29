@@ -228,7 +228,7 @@ class OSLib:
         This might not be the case after a fresh installation, when package
         indexes haven't been downloaded yet.
         '''
-        return bool(self._yum.repos.listEnabled())h
+        return bool(self._yum.repos.listEnabled())
 
     def update_repository_indexes(self, progress_cb):
         '''Download package repository indexes.
