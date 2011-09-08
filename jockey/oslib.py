@@ -42,7 +42,7 @@ class OSLib:
         '''
         
         # create an instance of yum
-        self._yum = yum.YumBase()
+        #self._yum = yum.YumBase()
         
         # relevant stuff for clients and backend
         self._get_os_version()
@@ -125,7 +125,7 @@ class OSLib:
 
     def is_package_free(self, package):
         '''Return if given package is free software.'''
-
+        self._yum = yum.YumBase()
         pkg = self._yum.pkgSack.returnNewestByName(package)[0]
         license = pkg.returnSimple('license')
         if license:
@@ -136,6 +136,7 @@ class OSLib:
 
     def package_installed(self, package):
         '''Return if the given package is installed.'''
+        self._yum = yum.YumBase()
         return self._yum.isPackageInstalled(package)
 
     def package_description(self, package):
@@ -143,6 +144,7 @@ class OSLib:
         
         This should raise a ValueError if the package is not available.
         '''
+        self._yum = yum.YumBase()
         try:
             pkg = self._yum.pkgSack.returnNewestByName(package)[0]
             return (pkg.returnSimple('summary'), pkg.returnSimple('description'))
@@ -154,6 +156,7 @@ class OSLib:
         
         This should raise a ValueError if the package is not installed.
         '''
+        self._yum = yum.YumBase()
         try:
             pkg = self._yum.rpmdb.returnNewestByName(package)[0]
             return pkg.filelist
@@ -187,6 +190,7 @@ class OSLib:
         An unknown package should raise a ValueError. Any installation failure
         should be raised as a SystemError.
         '''
+        self._yum = yum.YumBase()
         if repository or fingerprint:
             raise NotImplementedError('Yum default implementation does not currently support repositories or fingerprints')
 
@@ -214,6 +218,7 @@ class OSLib:
 
         Any removal failure should be raised as a SystemError.
         '''
+        self._yum = yum.YumBase()
         try:
             pkg = self._yum.rpmdb.returnNewestByName(package)[0]
             self._yum.remove(pkg)
@@ -228,6 +233,7 @@ class OSLib:
         This might not be the case after a fresh installation, when package
         indexes haven't been downloaded yet.
         '''
+        self._yum = yum.YumBase()
         return bool(self._yum.repos.listEnabled())
 
     def update_repository_indexes(self, progress_cb):
@@ -240,6 +246,7 @@ class OSLib:
         regularly. Passes '-1' for current and/or total if time cannot be
         determined.
         '''
+        self._yum = yum.YumBase()
         result = False
         try:
             self._yum.repos.populateSack('all', 'metadata')
@@ -253,6 +260,7 @@ class OSLib:
 
         Currently defined values: apt, yum
         '''
+        self._yum = yum.YumBase()
         if os.path.exists('/etc/yum.conf'):
             return 'yum'
         elif os.path.exists('/etc/apt/sources.list') or \
@@ -269,6 +277,7 @@ class OSLib:
 
         Raise a SystemError if anything goes wrong.
         '''
+        self._yum = yum.YumBase()
         if fingerprint in self._gpg_keyring_fingerprints(keyring):
             return
 
@@ -346,6 +355,7 @@ class OSLib:
 
     def repository_enabled(self, repository):
         '''Check if given repository is enabled.'''
+        self._yum = yum.YumBase()
         return repository in [repo.id for repo in self._yum.repos.listEnabled()]
 
     def ui_help_available(self, ui):
